@@ -1,0 +1,69 @@
+name: "UHC_Control"
+main: "rei.UHC_PluginControl"
+version: "1.0"
+depend: [WorldEdit, TreasureHunt]
+
+commands:
+   joinTeamPlay:
+      description: This command assigns a player to a given team and scatters him / teleports him to his team-spawn
+      usage: /joinTeamPlay <teamId> <playerName>
+   voteStart:
+      description: voteStart
+      usage: /voteStart <votingPlayer>
+   voteEnableNoobHelper:
+      description: voteEnableNoobHelper
+      usage: /voteEnableNoobHelper <votingPlayer>
+   voteDisableNoobHelper:
+      description: voteDisableNoobHelper
+      usage: /voteDisableNoobHelper <votingPlayer>
+   voteNormal:
+      description: vote for normal difficulty
+      usage: /voteNormal <votingPlayer>
+   voteHard:
+      description: vote for hard difficulty
+      usage: /voteHard <votingPlayer>
+   noob:
+      description: makes the game easyer for defined players
+      usage: /noob <player1> <player2> <...>
+   noNoob:
+      description: removes noob-helper from players
+      usage: /noNoob <player1> <player2> <...>
+   heal:
+      description: heals and feeds defined players
+      usage: /heal <player1> <player2> <...>
+   revive:
+      description: revives defined players
+      usage: /revive <player1> <player2> <...>
+   reviveAll:
+      description: revives all ghosts and ports to ground
+      usage: /reviveAll
+   healAll:
+      description: heals and feeds all players
+      usage: /healAll
+   delay:
+      description: delays the ending of the game
+      usage: /delay
+   start:
+      description: starts game even with to few players
+      usage: /start
+   end:
+      description: skips waiting times at the end of the game
+      usage: /end
+   remove:
+      description: removes an offline player from his team (by vote)
+      usage: /remove <player>
+   sethp:
+      description: sets the player hp to the given %
+      usage: /sethp <player> <hp%>
+   resetWorld:
+      description: kicks all players and resets the world 
+      usage: /resetWorld
+   serverinfo:
+      description: server info
+      usage: /serverinfo
+   test:
+      description: for testing
+      usage: /test ... ...
+   book:
+      description: for editing the starter book
+      usage: /book ( edit | save | preview )
