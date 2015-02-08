@@ -12,7 +12,7 @@ public class AdventureArena extends JavaPlugin {
 	public void onEnable() {
 		super.onEnable();
 		instance = this;
-		//getServer().getPluginManager().registerEvents(new AdventureEvents(), this);
+		getServer().getPluginManager().registerEvents(new AA_Events(), this);
 		new AA_Commands(this);
 	}
 
@@ -28,8 +28,8 @@ public class AdventureArena extends JavaPlugin {
 		}
 	}
 
-	public static void executeDelayed(final int seconds, final Runnable runnable) {
-		instance.getServer().getScheduler().scheduleSyncDelayedTask(instance, runnable, seconds*20);
+	public static void executeDelayed(final double delaySec, final Runnable runnable) {
+		instance.getServer().getScheduler().scheduleSyncDelayedTask(instance, runnable, (long) (delaySec*20));
 	}
 
 	public static void executePeriodically(final int delaySec, final Runnable runnable) {

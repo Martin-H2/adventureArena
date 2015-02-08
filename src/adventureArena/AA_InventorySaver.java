@@ -1,19 +1,18 @@
 package adventureArena;
 
+import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 
-public class InventorySaver {
+public class AA_InventorySaver {
+
+
+	private static final boolean KEEP_ARENA_XP_AS_REWARD = false;
 
 
 	public static void saveInventoryAndPlayerMeta(final Player player){
-		player.sendMessage("getTotalExperience: " + player.getTotalExperience());
-		player.sendMessage("getExp: " + player.getExp());
-		player.sendMessage("getLevel: " + player.getLevel());
-
-
 		PlayerInventory inventory = player.getInventory();
 		FileConfiguration config = AdventureArena.getInstance().getConfig();
 		String path = "savedPlayerInventories." + player.getName();
@@ -25,20 +24,15 @@ public class InventorySaver {
 
 		int i = 0;
 		for(ItemStack item : inventory.getContents()){
-			config.set(path + ".contents." + i, item);
+			config.set(path + ".bag." + i, item);
 			i++;
 		}
 
 		i = 0;
 		for(ItemStack item : inventory.getArmorContents()){
-			config.set(path + ".armorContents." + i, item);
+			config.set(path + ".armor." + i, item);
 			i++;
 		}
-
-		//		config.set(path + ".maxstacksize", inventory.getMaxStackSize());
-		//		config.set(path + ".inventorytitle", inventory.getTitle());
-		//		config.set(path + ".inventorysize", inventory.getSize());
-		//		config.set(path + ".inventoryholder", inventory.getHolder());
 
 		player.setHealth(player.getMaxHealth());
 		player.setLevel(0);
@@ -48,6 +42,7 @@ public class InventorySaver {
 		inventory.setArmorContents(new ItemStack[inventory.getArmorContents().length]);
 
 		AdventureArena.getInstance().saveConfig();
+		player.sendMessage(ChatColor.GREEN + "Your Inventory and XP has been saved...");
 	}
 
 
@@ -59,23 +54,26 @@ public class InventorySaver {
 		if(config.contains(path)){
 
 			player.setHealth(config.getDouble(path + ".health", player.getMaxHealth()));
-			player.setExp(config.getInt(path + ".xp"));
-			player.setLevel(player.getLevel() + config.getInt(path + ".level"));
+			player.setLevel((KEEP_ARENA_XP_AS_REWARD ? player.getLevel() : 0) + config.getInt(path + ".level"));
+			player.setExp((float) config.getDouble(path + ".xp"));
 			player.setFoodLevel(config.getInt(path + ".foodLevel", 20));
 
 			ItemStack[] items = inventory.getContents();
 			for(int i=0; i<items.length; i++){
-				items[i] = config.getItemStack(path + ".contents." + i, null);
+				items[i] = config.getItemStack(path + ".bag." + i, null);
 			}
 			inventory.setContents(items);
 
 			ItemStack[] armor = inventory.getArmorContents();
 			for(int i=0; i<armor.length; i++){
-				armor[i] = config.getItemStack(path + ".armorContents." + i, null);
+				armor[i] = config.getItemStack(path + ".armor." + i, null);
 			}
 			inventory.setArmorContents(armor);
 
+			config.set(path, null);
+			AdventureArena.getInstance().saveConfig();
 		}
+		player.sendMessage(ChatColor.GREEN + "Your Inventory and XP has been restored...");
 	}
 
 

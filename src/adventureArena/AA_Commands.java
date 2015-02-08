@@ -33,14 +33,14 @@ public class AA_Commands implements CommandExecutor {
 			if (args.length != 1) return false;
 			Player player = AdventureArena.getOnlinePlayerStartingWith(args[0]);
 			if (player == null) return false;
-			InventorySaver.saveInventoryAndPlayerMeta(player);
+			AA_InventorySaver.saveInventoryAndPlayerMeta(player);
 		}
 
 		if (commandName.equals(restoreInventory)) {
 			if (args.length != 1) return false;
 			Player player = AdventureArena.getOnlinePlayerStartingWith(args[0]);
 			if (player == null) return false;
-			InventorySaver.restoreInventoryAndPlayerMeta(player);
+			AA_InventorySaver.restoreInventoryAndPlayerMeta(player);
 		}
 
 
