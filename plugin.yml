@@ -4,3 +4,10 @@ version: "1.0"
 depend: []
 
 commands:
+   saveInventory:
+      description: saveInventory
+      usage: /saveInventory <player>
+   restoreInventory:
+      description: restoreInventory
+      usage: /restoreInventory <player>
+      
