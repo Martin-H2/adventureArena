@@ -13,23 +13,32 @@ public class AA_Events implements Listener {
 	@EventHandler
 	public void onPlayerRespawn(final PlayerRespawnEvent event) {
 		final Player player = event.getPlayer();
-		String path = "savedPlayerInventories." + player.getName();
 		FileConfiguration config = AdventureArena.getInstance().getConfig();
-
-		if(config.contains(path)){
-			AA_InventorySaver.restoreInventoryAndPlayerMeta(player);
+		if(config.getBoolean("isInArena." + player.getName(), false)){
+			AdventureArena.executeDelayed(0.1, new Runnable() {
+				@Override
+				public void run() {
+					player.addPotionEffect(AA_Commands.MINING_FATIGUE_5);
+				}
+			});
 		}
-
 	}
 
 
 
 
-
-
-
-
-
+	//	@EventHandler
+	//	public void onPlayerQuit(final PlayerQuitEvent event) {
+	//		FileConfiguration config = AdventureArena.getInstance().getConfig();
+	//		config.set("lastGameMode." + event.getPlayer().getName(), event.getPlayer().getGameMode().toString());
+	//		AdventureArena.getInstance().saveConfig();
+	//	}
+	//
+	//	@EventHandler
+	//	public void onPlayerJoin(final PlayerJoinEvent event) {
+	//		FileConfiguration config = AdventureArena.getInstance().getConfig();
+	//		event.getPlayer().setGameMode(GameMode.valueOf(config.getString("lastGameMode." + event.getPlayer().getName(), "SURVIVAL")));
+	//	}
 
 
 	//	@EventHandler

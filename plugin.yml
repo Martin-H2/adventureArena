@@ -5,9 +5,11 @@ depend: []
 
 commands:
    saveInventory:
-      description: saveInventory
       usage: /saveInventory <player>
    restoreInventory:
-      description: restoreInventory
       usage: /restoreInventory <player>
+   enableDigging:
+      usage: /enableDigging <player>
+   disableDigging:
+      usage: /disableDigging <player>
       
