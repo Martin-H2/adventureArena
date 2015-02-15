@@ -22,12 +22,6 @@ public class AdventureArena extends JavaPlugin {
 	}
 
 
-	public static void broadcast(final Object o) {
-		for (Player p: Bukkit.getOnlinePlayers()) {
-			p.sendMessage(o!=null?o.toString():"null");
-		}
-	}
-
 	public static void executeDelayed(final double delaySec, final Runnable runnable) {
 		instance.getServer().getScheduler().scheduleSyncDelayedTask(instance, runnable, (long) (delaySec*20));
 	}
@@ -47,6 +41,9 @@ public class AdventureArena extends JavaPlugin {
 		}
 		return null;
 	}
+
+
+
 
 
 

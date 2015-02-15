@@ -1,30 +1,25 @@
 package adventureArena;
 
+import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
 public class AA_Commands implements CommandExecutor {
 
 
-	public static final String saveInventory = "saveInventory";
-	public static final String restoreInventory = "restoreInventory";
-	public static final String disableDigging = "disableDigging";
-	public static final String enableDigging = "enableDigging";
-	public static final PotionEffect MINING_FATIGUE_5 = new PotionEffect(PotionEffectType.SLOW_DIGGING, Integer.MAX_VALUE, 5, true);
+	public static final String joinMiniGameHub = "joinMiniGameHub";
+	public static final String leaveMiniGameHub = "leaveMiniGameHub";
+	public static final String serverinfo = "serverinfo";
 
 
 	public AA_Commands(final JavaPlugin javaPlugin) {
-		javaPlugin.getCommand(saveInventory).setExecutor(this);
-		javaPlugin.getCommand(restoreInventory).setExecutor(this);
-		javaPlugin.getCommand(disableDigging).setExecutor(this);
-		javaPlugin.getCommand(enableDigging).setExecutor(this);
+		javaPlugin.getCommand(joinMiniGameHub).setExecutor(this);
+		javaPlugin.getCommand(leaveMiniGameHub).setExecutor(this);
+		javaPlugin.getCommand(serverinfo).setExecutor(this);
 	}
-
 
 
 
@@ -33,40 +28,52 @@ public class AA_Commands implements CommandExecutor {
 
 		String commandName = command.getName();
 		if (!sender.isOp()) {
-			sender.sendMessage("You need to be Op for this.");
+			AA_MessageSystem.error("You need to be Op for this.", sender);
 			return true;
 		}
 
-		if (commandName.equals(saveInventory)) {
-			if (args.length != 1) return false;
-			Player player = AdventureArena.getOnlinePlayerStartingWith(args[0]);
-			if (player == null) return false;
-			AA_InventorySaver.saveInventoryAndPlayerMeta(player);
-			AdventureArena.getInstance().getConfig().set("isInArena." + player.getName(), true);
-			AdventureArena.getInstance().saveConfig();
+
+		if (commandName.equals(serverinfo))  {
+			serverInfo();
 		}
 
-		if (commandName.equals(restoreInventory)) {
-			if (args.length != 1) return false;
+
+		//joinMiniGameHub Rei 124 40 -60
+		else if (commandName.equals(joinMiniGameHub)) {
+			if (args.length != 1 && args.length != 4) return false;
 			Player player = AdventureArena.getOnlinePlayerStartingWith(args[0]);
 			if (player == null) return false;
-			AA_InventorySaver.restoreInventoryAndPlayerMeta(player);
-			AdventureArena.getInstance().getConfig().set("isInArena." + player.getName(), false);
-			AdventureArena.getInstance().saveConfig();
+			Location target = null;
+			if (args.length == 4) {
+				try {
+					int x = Integer.parseInt(args[1]);
+					int y = Integer.parseInt(args[2]);
+					int z = Integer.parseInt(args[3]);
+					target = new Location(player.getWorld(), x, y, z);
+				} catch (NumberFormatException e) {
+					return false;
+				}
+			}
+			AA_MiniGameControl.joinMiniGameHub(player, target);
 		}
 
-		if (commandName.equals(disableDigging)) {
-			if (args.length != 1) return false;
+		//leaveMiniGameHub Rei 124 65 160
+		else if (commandName.equals(leaveMiniGameHub)) {
+			if (args.length != 1 && args.length != 4) return false;
 			Player player = AdventureArena.getOnlinePlayerStartingWith(args[0]);
 			if (player == null) return false;
-			player.addPotionEffect(MINING_FATIGUE_5);
-		}
-
-		if (commandName.equals(enableDigging)) {
-			if (args.length != 1) return false;
-			Player player = AdventureArena.getOnlinePlayerStartingWith(args[0]);
-			if (player == null) return false;
-			player.removePotionEffect(MINING_FATIGUE_5.getType());
+			Location target = null;
+			if (args.length == 4) {
+				try {
+					int x = Integer.parseInt(args[1]);
+					int y = Integer.parseInt(args[2]);
+					int z = Integer.parseInt(args[3]);
+					target = new Location(player.getWorld(), x, y, z);
+				} catch (NumberFormatException e) {
+					return false;
+				}
+			}
+			AA_MiniGameControl.leaveMiniGameHub(player, target);
 		}
 
 
@@ -74,6 +81,12 @@ public class AA_Commands implements CommandExecutor {
 	}
 
 
+
+	private void serverInfo() {
+		AA_MessageSystem.sideNote("java.version: " + System.getProperty("java.version"));
+		AA_MessageSystem.sideNote("os.arch: " + System.getProperty("os.arch"));
+
+	}
 
 
 }

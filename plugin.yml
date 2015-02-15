@@ -4,12 +4,9 @@ version: "1.0"
 depend: []
 
 commands:
-   saveInventory:
-      usage: /saveInventory <player>
-   restoreInventory:
-      usage: /restoreInventory <player>
-   enableDigging:
-      usage: /enableDigging <player>
-   disableDigging:
-      usage: /disableDigging <player>
-      
+   joinMiniGameHub:
+      usage: /joinMiniGameHub <player> [x y z]
+   leaveMiniGameHub:
+      usage: /leaveMiniGameHub <player> [x y z]
+   serverinfo:
+      usage: /serverinfo
