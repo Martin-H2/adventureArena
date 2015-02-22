@@ -1,19 +1,33 @@
 package adventureArena;
 
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 
 public class AdventureArena extends JavaPlugin {
 
 	private static AdventureArena instance;
+	public static WorldEditPlugin wep;
 
 	@Override
 	public void onEnable() {
 		super.onEnable();
+		wep = (WorldEditPlugin) getServer().getPluginManager().getPlugin("WorldEdit");
+		if (wep == null) {
+			AA_MessageSystem.consoleError("can't find WorldEdit");
+		} else {
+			AA_MessageSystem.consoleInfo("found WorldEdit");
+		}
+
+		ConfigurationSerialization.registerClass(AA_SpawnEquip.class);
 		instance = this;
 		getServer().getPluginManager().registerEvents(new AA_Events(), this);
 		new AA_Commands(this);
+		AA_MiniGameControl.loadMiniGamesFromConfig();
+		AA_MessageSystem.consoleInfo("loaded " + AA_MiniGameControl.getNumberOfMiniGames() + " miniGame configs.");
 	}
 
 
@@ -28,6 +42,11 @@ public class AdventureArena extends JavaPlugin {
 
 	public static void executePeriodically(final int delaySec, final Runnable runnable) {
 		instance.getServer().getScheduler().scheduleSyncRepeatingTask(instance, runnable, delaySec*20, delaySec*20);
+	}
+
+
+	public static void simulateServerCommand(final String command) {
+		Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
 	}
 
 

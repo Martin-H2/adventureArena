@@ -1,6 +1,7 @@
 package adventureArena;
 
 public class AA_ConfigPaths {
+	public static final String savedCreativeData = "savedCreativeData";
 	public static final String savedPlayerData = "savedPlayerData";
 	public static final String health = "health";
 	public static final String xp = "xp";
@@ -15,9 +16,24 @@ public class AA_ConfigPaths {
 
 	public static final String isInMiniGameHub = "isInMiniGameHub";
 	public static final String playerStates = "playerStates";
+	public static final String activeMinigameId = "activeMinigameId";
 	public static final String miniGameHubSpawnX = "miniGameHubSpawn.x";
 	public static final String miniGameHubSpawnY = "miniGameHubSpawn.y";
 	public static final String miniGameHubSpawnZ = "miniGameHubSpawn.z";
+
+
+	public static final String worldName = "worldName";
+	public static final String southEastMax = "southEastMax";
+	public static final String northWestMin = "northWestMin";
+	public static final String name = "name";
+	public static final String pvpDamage = "pvpDamage";
+	public static final String scoreMode = "scoreMode";
+	public static final String spawnPoints = "spawnPoints";
+	public static final String spawnEquip = "spawnEquip";
+	public static final String allowedEditors = "allowedEditors";
+	public static final String needsEnvironmentBackup = "needsEnvironmentBackup";
+	public static final String lockedByEditSession = "lockedByEditSession";
+	public static final String inProgress = "inProgress";
 
 
 

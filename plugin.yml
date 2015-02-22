@@ -1,7 +1,7 @@
 name: "adventureArena"
 main: "adventureArena.AdventureArena"
 version: "1.0"
-depend: []
+depend: [WorldEdit]
 
 commands:
    joinMiniGameHub:
@@ -10,3 +10,6 @@ commands:
       usage: /leaveMiniGameHub <player> [x y z]
    serverinfo:
       usage: /serverinfo
+   mg:
+      usage: /mg [info|addAllowedEditor <miniGameID> <name>|removeAllowedEditor <miniGameID> <name>]
+      

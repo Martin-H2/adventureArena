@@ -1,5 +1,7 @@
 package adventureArena;
 
+import java.util.Collection;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
@@ -25,27 +27,53 @@ public class AA_MessageSystem {
 	}
 
 
-
-
-
-	public static void gameplayWarning(final Object o, final CommandSender p) {
-		send(ChatColor.DARK_PURPLE + "[Arena] " + ChatColor.ITALIC + o.toString(), p);
-	}
-	public static void error(final Object o, final CommandSender sender) {
-		send(ChatColor.RED + "[Error] " + ChatColor.ITALIC + o.toString(), sender);
-	}
-	public static void success(final Object o, final CommandSender p) {
-		send(ChatColor.DARK_GREEN + "[Success] " + ChatColor.ITALIC + o.toString(), p);
-	}
-	public static void sideNote(final Object o, final CommandSender p) {
-		send(ChatColor.GRAY + "[Note] " + ChatColor.ITALIC + o.toString(), p);
+	public static String getErrorColor() {
+		return ChatColor.RED.toString();
 	}
 
-	public static void gameplayWarning(final Object o) {
+	public static String getSuccessColor() {
+		return ChatColor.GREEN.toString();
+	}
+
+
+	public static void gameplayWarning(final Object o, final Player p) {
+		send(ChatColor.DARK_PURPLE + "[MiniGames] " + ChatColor.ITALIC + o.toString(), p);
+	}
+	public static void gameplayWarningAll(final Object o) {
 		gameplayWarning(o, null);
 	}
-	public static void sideNote(final Object o) {
-		sideNote(o, null);
+	public static void gameplayWarningForGroup(final Object o, final Collection<Player> cp) {
+		for (Player p: cp) {
+			gameplayWarning(o, p);
+		}
+	}
+
+
+
+	public static void errorForGroup(final Object o, final Collection<Player> cp) {
+		for (Player p: cp) {
+			error(o, p);
+		}
+	}
+	public static void error(final Object o, final CommandSender sender) {
+		send(ChatColor.DARK_RED + "[Error] " + getErrorColor() + o.toString(), sender);
+	}
+	public static void errorAll(final Object o) {
+		error(o, null);
+	}
+	public static void success(final Object o, final CommandSender p) {
+		send(ChatColor.DARK_GREEN + "[Success] " + getSuccessColor() + o.toString(), p);
+	}
+	public static void sideNoteForGroup(final Object o, final Collection<Player> cp) {
+		for (Player p: cp) {
+			sideNote(o, p);
+		}
+	}
+	public static void sideNote(final Object o, final CommandSender p) {
+		send(ChatColor.DARK_GRAY + "[Note] " + ChatColor.GRAY + o.toString(), p);
+	}
+	public static void example(final Object o, final CommandSender p) {
+		send(ChatColor.DARK_GRAY + "[Example] " + ChatColor.GOLD + o.toString(), p);
 	}
 
 
