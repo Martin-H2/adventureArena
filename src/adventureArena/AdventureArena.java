@@ -19,7 +19,7 @@ public class AdventureArena extends JavaPlugin {
 		if (wep == null) {
 			AA_MessageSystem.consoleError("can't find WorldEdit");
 		} else {
-			AA_MessageSystem.consoleInfo("found WorldEdit");
+			//AA_MessageSystem.consoleInfo("found WorldEdit");
 		}
 
 		ConfigurationSerialization.registerClass(AA_SpawnEquip.class);

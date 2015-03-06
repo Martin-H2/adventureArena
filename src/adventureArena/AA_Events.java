@@ -16,6 +16,10 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityRegainHealthEvent;
+import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerAnimationEvent;
@@ -26,6 +30,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 
 @SuppressWarnings("deprecation")
 public class AA_Events implements Listener {
@@ -44,37 +49,68 @@ public class AA_Events implements Listener {
 		if(!AA_MiniGameControl.isInMiniGameHub(event.getPlayer())) {
 			event.getPlayer().setGameMode(Bukkit.getDefaultGameMode());
 		}
+		AA_MiniGameControl.kickIfPlayingMiniGame(event.getPlayer());
 	}
 
 
 	// ############## MINIGAME GAMEPLAY ################
 
 	@EventHandler
-	public void onPlayerDeath(final PlayerDeathEvent event) {
-		if (AA_MiniGameControl.isPlayingMiniGame(event.getEntity())) {
-			event.setKeepLevel(true);
-			AdventureArena.executeDelayed(0.1, new Runnable() {
-				@Override
-				public void run() {
-					AA_MiniGameControl.leaveMiniGame(event.getEntity());
+	public void onEntityRegainHealth(final EntityRegainHealthEvent e) {
+		if (e.getEntity() instanceof Player && AA_MiniGameControl.isPlayingMiniGame((Player) e.getEntity())) {
+			e.setCancelled(true);
+		}
+	}
 
-				}
-			});
+	@EventHandler
+	public void onItemSpawn(final ItemSpawnEvent e) {
+		if(AA_MiniGameControl.getMiniGameContainingLocation(e.getLocation())!=null){
+			//FIXME test
+			//e.setCancelled(true);
+		}
+	}
+	@EventHandler
+	public void onCreatureSpawn(final CreatureSpawnEvent e) {
+		if(AA_MiniGameControl.getMiniGameContainingLocation(e.getLocation())!=null){ //TODO improve this with isInsideMgHub()
+			e.setCancelled(true);
+		}
+	}
+	@EventHandler
+	public void onPlayerDeath(final PlayerDeathEvent event) {
+		Player player = event.getEntity();
+		if (AA_MiniGameControl.isPlayingMiniGame(player)) {
+			event.setKeepLevel(true);
+			AA_ScoreManager.onPlayerDeath(event.getEntity());
+			AA_MiniGameControl.leaveCurrentMiniGame(player, true);
 		} else {
 			event.setKeepLevel(false);
 		}
 	}
 	@EventHandler
-	public void onPlayerQuit(final PlayerQuitEvent e) {
-		if (AA_MiniGameControl.isPlayingMiniGame(e.getPlayer())) {
-			AA_MiniGameControl.leaveMiniGame(e.getPlayer());
+	public void onEntityDeath(final EntityDeathEvent event) {
+		Player killer = event.getEntity().getKiller();
+		if (killer != null && AA_MiniGameControl.isPlayingMiniGame(killer)) {
+			AA_ScoreManager.onEntityDeath(event.getEntity(), killer);
 		}
 	}
 	@EventHandler
-	public void onPlayerKick(final PlayerKickEvent e) {
-		if (AA_MiniGameControl.isPlayingMiniGame(e.getPlayer())) {
-			AA_MiniGameControl.leaveMiniGame(e.getPlayer());
+	public void onPlayerRespawn(final PlayerRespawnEvent event) {
+		if (AA_MiniGameControl.isInMiniGameHub(event.getPlayer())) {
+			AdventureArena.executeDelayed(0.1, new Runnable() {
+				@Override
+				public void run() {
+					AA_MiniGameControl.setMiniGameSpectator(event.getPlayer(), false);
+				}
+			});
 		}
+	}
+	@EventHandler
+	public void onPlayerQuit(final PlayerQuitEvent e) {
+		AA_MiniGameControl.kickIfPlayingMiniGame(e.getPlayer());
+	}
+	@EventHandler
+	public void onPlayerKick(final PlayerKickEvent e) {
+		AA_MiniGameControl.kickIfPlayingMiniGame(e.getPlayer());
 	}
 
 
@@ -93,7 +129,7 @@ public class AA_Events implements Listener {
 	}
 
 	@EventHandler
-	public void onInventoryOpen(final InventoryOpenEvent event) {//TODO use block enter event ?
+	public void onInventoryOpen(final InventoryOpenEvent event) {//TODO use block enter event + netherPortal protection
 		if (event.getPlayer() instanceof Player) {
 			antiCheatControl((Player) event.getPlayer(), null, event);
 		}
@@ -112,7 +148,7 @@ public class AA_Events implements Listener {
 			}
 			if (!AA_MiniGameControl.isPlayerInsideHisEditableArea(player)) {
 				c.setCancelled(true);
-				AA_MiniGameControl.leaveMiniGame(player);
+				AA_MiniGameControl.leaveCurrentMiniGame(player, false);
 				AA_MessageSystem.sideNote("You escaped with CREATIVE somehow...", player);
 			}
 
@@ -190,10 +226,6 @@ public class AA_Events implements Listener {
 
 
 
-
-	//	@EventHandler
-	//	public void onPlayerRespawn(final PlayerRespawnEvent event) {
-	//	}
 
 
 

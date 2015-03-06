@@ -34,6 +34,9 @@ public class AA_SignCommand {
 		commands.add("start");
 		commands.add("edit");
 		commands.add("exit");
+		commands.add("highScore");
+		commands.add("@start");
+		commands.add("@near");
 	}
 	static HashSet<UUID> playersWithCommandTimeout = new HashSet<UUID>();
 
@@ -83,11 +86,11 @@ public class AA_SignCommand {
 		}
 
 		if (command.equals("start")) {
-			String teamName = "default";
+			String teamName = AA_TeamManager.FFA_TEAM;
 			if (parameterMap.containsKey("team")) {
 				teamName = parameterMap.get("team");
 			}
-			AA_MiniGameControl.doChecksAndRegisterTeam(miniGame, teamName, attachedBlock.getLocation().add(0.5, 0, 0.5), 3.8);
+			AA_TeamManager.doChecksAndRegisterTeam(miniGame, teamName, attachedBlock.getLocation().add(0.5, 0, 0.5), 3.8);
 			return true;
 		}
 
@@ -97,7 +100,7 @@ public class AA_SignCommand {
 		}
 
 		if (command.equals("exit")) {
-			AA_MiniGameControl.leaveMiniGame(player);
+			AA_MiniGameControl.leaveCurrentMiniGame(player, false);
 			return true;
 		}
 
@@ -113,26 +116,19 @@ public class AA_SignCommand {
 
 		AA_MiniGame miniGame = AA_MiniGameControl.getMiniGameContainingLocation(signBlock.getLocation());
 
-		if (command.equals("start") || command.equals("edit")) {
-			if (!breaker.isOp()) {
-				failAndCancel(breaker, "Only Op can move the entrances", c);
-				return false;
-			}
+		if (!breaker.isOp() && isOpOnlyCommand()) {
+			failAndCancel(breaker, "Only Op can remove " + highlightColor() + command, c);
+			return false;
 		}
-		if (command.equals("border")) {
-			if (!breaker.isOp()) {
-				failAndCancel(breaker, "Only Op can move the border", c);
-				return false;
-			}
-		} else {
-			if (miniGame==null) {
-				int id = Integer.parseInt(parameterMap.get("id"));
-				failAndCancel(breaker, "Can't find corresponding miniGame #" + id, c);
-				return false;
-			} else if (!miniGame.isEditableByPlayer(breaker)) {
-				failAndCancel(breaker, "You are not allowed to modify this miniGame", c);
-				return false;
-			}
+
+		if (miniGame==null && isSurroundingMiniGameRequired()) {
+			failAndCancel(breaker, "Command-sign is not inside miniGame borders", c);
+			return false;
+		}
+
+		if (miniGame!=null && !miniGame.isEditableByPlayer(breaker)) {
+			failAndCancel(breaker, "You are not allowed to modify this miniGame", c);
+			return false;
 		}
 
 
@@ -171,13 +167,23 @@ public class AA_SignCommand {
 			if (parameterMap.containsKey("team")) {
 				teamName = parameterMap.get("team");
 			} else {
-				teamName = "default";
+				teamName = AA_TeamManager.FFA_TEAM;
 			}
 			miniGame.removeSpawnPoint(teamName, attachedBlock.getLocation());
 			AA_MessageSystem.success("(" + miniGame.getNumberOfSpawnPoints() + " SpawnPoints left)", breaker);
 		}
 		else if (command.equals("score")) {
 			//TODO add score
+		}
+		else if (command.equals("highScore")) {
+			if (miniGame==null) {
+				int id = Integer.parseInt(parameterMap.get("id"));
+				miniGame = AA_MiniGameControl.getMiniGame(id);
+				if (miniGame==null)
+					return false;
+			}
+			miniGame.unRegisterHighScoreSignLocation(signBlock.getLocation());
+			miniGame.persist();
 		}
 
 
@@ -198,25 +204,19 @@ public class AA_SignCommand {
 
 		AA_MiniGame miniGame = AA_MiniGameControl.getMiniGameContainingLocation(signBlock.getLocation());
 
-		if (command.equals("start") || command.equals("edit")) {
-			if (!creator.isOp()) {
-				failAndBreak(creator, "Only Op can set the entrances");
-				return false;
-			}
+		if (!creator.isOp() && isOpOnlyCommand()) {
+			failAndBreak(creator, "Only Op can set " + highlightColor() + command);
+			return false;
 		}
-		if (command.equals("border")) {
-			if (!creator.isOp()) {
-				failAndBreak(creator, "Only Op can set the border");
-				return false;
-			}
-		} else {
-			if (miniGame==null) {
-				failAndBreak(creator, "Command-sign is not inside valid borders");
-				return false;
-			} else if (!miniGame.isEditableByPlayer(creator)) {
-				failAndBreak(creator, "You are not allowed to modify this miniGame");
-				return false;
-			}
+
+		if (miniGame==null && isSurroundingMiniGameRequired()) {
+			failAndBreak(creator, "Command-sign is not inside miniGame borders");
+			return false;
+		}
+
+		if (miniGame!=null && !miniGame.isEditableByPlayer(creator)) {
+			failAndBreak(creator, "You are not allowed to modify this miniGame");
+			return false;
 		}
 
 
@@ -236,6 +236,23 @@ public class AA_SignCommand {
 			if (parameterMap.get("corner").equals("seu")) {
 				miniGame.setSouthEastMax(signBlock.getLocation());
 			}
+		}
+		else if (command.equals("highScore")) {
+			if (miniGame==null) {
+				if (validateIntParamater(creator, "id", 0, Integer.MAX_VALUE)) {
+					int id = Integer.parseInt(parameterMap.get("id"));
+					miniGame = AA_MiniGameControl.getMiniGame(id);
+					if (miniGame==null) {
+						failAndBreak(creator, "No miniGame found with id: " + id);
+						return false;
+					}
+				} else {
+					failAndBreak(creator, "You need an id, placing this outside a miniGame");
+					return false;
+				}
+			}
+			miniGame.registerHighScoreSignLocation(signBlock.getLocation());
+			miniGame.persist();
 		}
 		else if (command.equals("settings") && validateStringParamater(creator, "name")
 				& validateIntParamater(creator, "pvpDamage", 0, 1)
@@ -336,12 +353,18 @@ public class AA_SignCommand {
 			if (parameterMap.containsKey("team")) {
 				teamName = parameterMap.get("team");
 			} else {
-				teamName = "default";
+				teamName = AA_TeamManager.FFA_TEAM;
 			}
 			miniGame.addSpawnPoint(teamName, attachedBlock.getLocation());
 		}
 		else if (command.equals("score")) {
-			//TODO add score
+			//TODO add / set score
+		}
+		else if (command.equals("highScore")) {
+			miniGame.registerHighScoreSignLocation(signBlock.getLocation());
+		}
+		else if (command.equals("@start")) {
+			//signBlock.getWorld().spawnEntity(loc, type)
 		}
 
 
@@ -354,6 +377,13 @@ public class AA_SignCommand {
 	}
 
 
+
+	private boolean isSurroundingMiniGameRequired() {
+		return !command.equals("border") && !command.equals("highScore");
+	}
+	private boolean isOpOnlyCommand() {
+		return command.equals("start") || command.equals("edit") || command.equals("border");
+	}
 
 	private boolean validateStringParamater(final Player executor, final String param, final String... possibleValues) {
 		if (!parameterMap.containsKey(param)) {
@@ -456,7 +486,7 @@ public class AA_SignCommand {
 				if (line.startsWith("[") && line.endsWith("]")) {
 					command = line.substring(1, line.length()-1);
 					if (optionalStylingLoopback != null) {
-						optionalStylingLoopback.setLine(i, "[" + ChatColor.BLUE + command + ChatColor.BLACK + "]");
+						optionalStylingLoopback.setLine(i, getFormatedCommand(command));
 					}
 					parameterMap = new LinkedHashMap<String, String>();
 				}
@@ -466,6 +496,10 @@ public class AA_SignCommand {
 		} else return null;
 	}
 
+
+	public static String getFormatedCommand(final String command) {
+		return "[" + ChatColor.BLUE + command + ChatColor.RESET + "]";
+	}
 
 	private static String resolveAbbreviations(String string) {
 		if (string.startsWith("dia_")) {

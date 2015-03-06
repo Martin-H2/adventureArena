@@ -3,9 +3,7 @@ package adventureArena;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -34,7 +32,10 @@ public class AA_MiniGameControl {
 	public static final GameMode MINIGAME_HUB_GAMEMODE = GameMode.ADVENTURE;
 	private static final PotionEffect PERMANENT_NIGHTVISION = new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 0, true, false);
 	private static List<AA_MiniGame> miniGames = new ArrayList<AA_MiniGame>();
-	private static HashMap<AA_MiniGame, List<String>> playersInMinigames = new HashMap<AA_MiniGame, List<String>>();
+
+	public static List<AA_MiniGame> getMiniGames() {
+		return miniGames;
+	}
 
 
 
@@ -51,16 +52,18 @@ public class AA_MiniGameControl {
 			player.setExp(0);
 			config.set(AA_ConfigPaths.isInMiniGameHub + "." + player.getName(), true);
 			savePluginConfig();
-			setMiniGameSpectator(player);
+			setMiniGameSpectator(player, false);
 		}
 	}
-	public static void setMiniGameSpectator(final Player player) {
+	public static void setMiniGameSpectator(final Player player, final boolean onDeath) {
 		setPlayerState(player, PlayerState.IS_WATCHING, null);
-		setNeutralPlayerState(player);
 		player.setGameMode(MINIGAME_HUB_GAMEMODE);
 		Location target = getMiniGameHubSpawn(player.getWorld());
 		player.setBedSpawnLocation(target, true);
-		teleportSafe(player, target);
+		if (!onDeath) {
+			setNeutralPlayerState(player);
+			teleportSafe(player, target);
+		}
 	}
 	public static void leaveMiniGameHub(final Player player, Location target) {
 		FileConfiguration config = getPluginConfig();
@@ -100,34 +103,22 @@ public class AA_MiniGameControl {
 			AA_MiniGame mg = AA_MiniGame.loadFromConfig(Integer.parseInt(path));
 			if (mg!=null) {
 				miniGames.add(mg);
+				if (mg.isInProgress()) {
+					AA_MessageSystem.consoleWarn("miniGame was still in progress: '" + mg.getName() + "', cleaning up...");
+					mg.wipePlaySession();
+				}
 			}
 		}
 		for (Player p: Bukkit.getOnlinePlayers()) {
-			if (isPlayingMiniGame(p) || isEditingMiniGame(p)) {
-				AA_MiniGame mg = getMiniGameForPlayer(p);
-				addPlayerToMinigameOverview(mg, p);
-				AA_MessageSystem.consoleWarn("player still in miniGame " + mg.getName() + " @reload: " + p.getName());
-			}
+			kickIfPlayingMiniGame(p);
 		}
 	}
-	private static void addPlayerToMinigameOverview(final AA_MiniGame mg, final Player p) {
-		AA_MessageSystem.consoleWarn("addPlayerToMinigameOverview: " + p.getName());
-		List<String> players = playersInMinigames.get(mg);
-		if (players==null) {
-			players = new ArrayList<String>();
+	public static void kickIfPlayingMiniGame(final Player p) {
+		if (isPlayingMiniGame(p)) {
+			AA_MiniGame mg = getMiniGameForPlayer(p);
+			AA_MessageSystem.consoleWarn("player "+ p.getName() + " still in miniGame '" + mg.getName() + "', kicking...");
+			leaveCurrentMiniGame(p, false);
 		}
-		players.add(p.getName());
-		playersInMinigames.put(mg, players);
-	}
-	private static int removePlayerFromMinigameOverview(final AA_MiniGame mg, final Player p) {
-		List<String> players = playersInMinigames.get(mg);
-		if (players==null) return 0;
-		//		AA_MessageSystem.consoleWarn("players.size(): " + players.size());
-		players.remove(p.getName());
-		//		AA_MessageSystem.consoleWarn("players.size() after rem: " + players.size());
-		playersInMinigames.put(mg, players);
-		//		AA_MessageSystem.consoleWarn("players.size() after get: " + playersInMinigames.get(mg).size());
-		return players.size();
 	}
 	public static void addMiniGame(final AA_MiniGame miniGame) {
 		miniGames.add(miniGame);
@@ -174,7 +165,7 @@ public class AA_MiniGameControl {
 				inv.addItem(new ItemStack(Material.MILK_BUCKET,1));
 			}
 			setPlayerState(player, PlayerState.IS_EDITING, miniGame);
-			addPlayerToMinigameOverview(miniGame, player);
+			miniGame.addPlayer(AA_TeamManager.EDITORS_TEAM, player);
 			miniGame.wipeEntities();
 		} else {
 			AA_MessageSystem.error("You are not allowed to edit this miniGame", player);
@@ -220,62 +211,7 @@ public class AA_MiniGameControl {
 
 	// ################ MINIGAME PROGRESS ##################
 
-	public static void doChecksAndRegisterTeam(final AA_MiniGame miniGame, final String teamName, final Location origin, final double radius) {
-		// COLLECT PLAYERS NEARBY
-		final ArrayList<Player> playersAroundSign = new ArrayList<Player>();
-		for (Player p: Bukkit.getOnlinePlayers()) {
-			if (origin.distance(p.getLocation())<=radius && isWatchingMiniGames(p)) {
-				playersAroundSign.add(p);
-			}
-		}
-		if (playersAroundSign.size()==0) return;
-
-		if (canJoinMiniGame(miniGame, playersAroundSign) && canTeamJoinMiniGame(miniGame, teamName, playersAroundSign)) {
-			if (teamName.equals("default") && AA_Team.teamChallengeActive(miniGame)) {
-				AA_MessageSystem.errorForGroup("Team-challenge pending, use team entrance.", playersAroundSign);
-				return;
-			}
-
-			boolean newChallengeForThisMiniGame = AA_Team.registerTeamChallenge(miniGame, teamName, playersAroundSign);
-			if (newChallengeForThisMiniGame) {
-				AA_MessageSystem.gameplayWarningForGroup("Team " + teamName + " wants to start '" + miniGame.getName() + "'", getAllGameHubSpectators());
-				AdventureArena.executeDelayed(10, new Runnable() {
-					@Override
-					public void run() {
-						Map<String, AA_Team> challengingTeamsForThisMiniGame = AA_Team.getChallengingTeamsForThisMiniGame(miniGame);
-						if (challengingTeamsForThisMiniGame.size()>1) {
-							// START GAME NOW !
-							if (canJoinMiniGame(miniGame, AA_Team.getAllChallengersFor(miniGame))) {
-								miniGame.wipeEntities();
-								AA_Team.removeChallengeFor(miniGame);
-								for (String teamName: challengingTeamsForThisMiniGame.keySet()) {
-									AA_Team team = challengingTeamsForThisMiniGame.get(teamName);
-									startMiniGameForTeam(miniGame, team.getTeamName(), team.getPlayers());
-								}
-							}
-						} else {
-							AA_MessageSystem.gameplayWarningForGroup("Nobody answered the challenge for '" + miniGame.getName() + "'", getAllGameHubSpectators());
-						}
-					}
-				});
-			}
-		}
-	}
-
-
-
-	private static boolean canTeamJoinMiniGame(final AA_MiniGame miniGame, final String teamName, final ArrayList<Player> players) {
-		List<Vector> teamSpawns = miniGame.getSpawnPoints(teamName);
-		// SPAWNS CHECK
-		if (teamSpawns==null || teamSpawns.isEmpty()) {
-			AA_MessageSystem.errorForGroup("No spawnpoints found for team " + teamName, players);
-			AA_MessageSystem.sideNoteForGroup(players.size() + " players failed joining your " + miniGame.getName() + ". (no spawPoints found)", miniGame.getAllowedEditors());
-			return false;
-		}
-		return true;
-	}
-
-	private static boolean canJoinMiniGame(final AA_MiniGame miniGame, final ArrayList<Player> players) {
+	static boolean canJoinMiniGame(final AA_MiniGame miniGame, final ArrayList<Player> players) {
 		// EDIT SESSION CHECK
 		if (miniGame.isLockedByEditSession()) {
 			AA_MessageSystem.errorForGroup("This minigame is currently locked by an edit-session.", players);
@@ -299,29 +235,13 @@ public class AA_MiniGameControl {
 	}
 
 
-	private static void startMiniGameForTeam(final AA_MiniGame miniGame, final String teamName, final ArrayList<Player> team) {
-		if (!canTeamJoinMiniGame(miniGame, teamName, team)) return;
-
-		List<Vector> teamSpawns = miniGame.getSpawnPoints(teamName);
-
-		for (int i=0; i<team.size(); i++) {
-			Player p = team.get(i);
-			if (i<teamSpawns.size()) {
-				joinMiniGame(miniGame, teamName,  p, teamSpawns.get(i));
-			} else {
-				AA_MessageSystem.error("No more spawnpoints in " + miniGame.getName() + " for team " + teamName + ". You can't participate.", p);
-			}
-		}
-	}
-
-
-	private static void joinMiniGame(final AA_MiniGame miniGame, final String teamName, final Player p, final Vector vector) {
+	static void joinMiniGame(final AA_MiniGame miniGame, final String teamName, final Player p, final Vector vector) {
 		if (!isWatchingMiniGames(p)) return;
 		AA_MessageSystem.success("Starting " + miniGame.getName() + " for you...", p);
 		setNeutralPlayerState(p);
 		teleportSafe(p, AA_TerrainHelper.getAirBlockAboveGround(vector.toLocation(p.getWorld()), true));
 		setPlayerState(p, PlayerState.IS_PLAYING,miniGame);
-		addPlayerToMinigameOverview(miniGame, p);
+		miniGame.addPlayer(teamName, p);
 		p.getInventory().addItem(miniGame.getSpawnEquip());
 	}
 
@@ -340,34 +260,51 @@ public class AA_MiniGameControl {
 		if (playerState==PlayerState.IS_WATCHING) {
 			getPluginConfig().set(AA_ConfigPaths.activeMinigameId + "." + p.getName(), null);
 		}
-
 		savePluginConfig();
 	}
 
-	public static void leaveMiniGame(final Player player) {
+	public static void leaveCurrentMiniGame(final Player player, final boolean onDeath) {
 		AA_MiniGame mg = getMiniGameForPlayer(player);
-		mg.wipeEntities();
-		AA_MessageSystem.consoleWarn("leaving minigame: " + mg.getName());
-		int numberOfPlayersLeft = removePlayerFromMinigameOverview(mg, player);
-		AA_MessageSystem.consoleWarn("numberOfPlayersLeft: " + numberOfPlayersLeft);
+		//Team team = AA_TeamManager.getTeam(player);
+		mg.removePlayer(player);
+		AA_ScoreManager.onPlayerLeft(mg, player);
 		if (isEditingMiniGame(player)) {
-			if (numberOfPlayersLeft==0) {
+			if (mg.getNumberOfPlayersRemaining()==0) {
 				mg.setLockedByEditSession(false);
+				mg.wipeEntities();
 			}
 			AA_InventorySaver.saveInventoryAndPlayerMeta(player, AA_ConfigPaths.savedCreativeData);
-		} else {
-			if (numberOfPlayersLeft==0) {
+		} else if (isPlayingMiniGame(player)) {
+			if (mg.isVictory()) {
+				win(mg);
 				mg.setInProgress(false);
+				mg.wipeEntities();
+				mg.wipePlaySession();
 				AA_MessageSystem.sideNoteForGroup("All players left your " + mg.getName() + ". Rolling back environment...", mg.getAllowedEditors());
 				mg.restoreEnvironmentBackup();
 			}
-
-			//TODO score etc ?
 		}
-		setMiniGameSpectator(player);
+		setMiniGameSpectator(player, onDeath);
+		AA_ScoreManager.updateHighScoreList(mg);
 	}
 
-	private static AA_MiniGame getMiniGameForPlayer(final Player player) {
+	private static void win(final AA_MiniGame mg) {
+		for (Player p: Bukkit.getOnlinePlayers()) {
+			AA_MiniGame playersMG = getMiniGameForPlayer(p);
+			if (mg.equals(playersMG)) {
+				AA_MessageSystem.success("You won " + mg.getName(), p);
+				AA_ScoreManager.onPlayerWin(mg, p);
+				mg.removePlayer(p);
+				setMiniGameSpectator(p, false);
+			}
+		}
+
+	}
+
+
+
+
+	public static AA_MiniGame getMiniGameForPlayer(final Player player) {
 		FileConfiguration config = getPluginConfig();
 		AA_MiniGame mg = null;
 		if (config.contains(AA_ConfigPaths.activeMinigameId + "." + player.getName())) {
@@ -390,7 +327,7 @@ public class AA_MiniGameControl {
 		return PlayerState.IS_WATCHING.toString().equals(getPluginConfig().getString(AA_ConfigPaths.playerStates + "." + player.getName()));
 	}
 
-	private static ArrayList<Player> getAllGameHubSpectators() {
+	static ArrayList<Player> getAllGameHubSpectators() {
 		ArrayList<Player> gameHubSpectators = new ArrayList<Player>();
 		for (Player p: Bukkit.getOnlinePlayers()) {
 			if (isWatchingMiniGames(p)) {
@@ -399,6 +336,11 @@ public class AA_MiniGameControl {
 		}
 		return gameHubSpectators;
 	}
+
+
+
+
+
 
 
 	// ################ PLAYER UTIL ##################

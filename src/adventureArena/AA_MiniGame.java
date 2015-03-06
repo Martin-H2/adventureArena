@@ -16,6 +16,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 
 public class AA_MiniGame {
@@ -25,13 +26,14 @@ public class AA_MiniGame {
 	private Vector southEastMax = null;
 	private Vector northWestMin = null;
 	private String name = "newMiniGame";
+	private String king = null;
 	private boolean pvpDamage = false;
 	private ScoreMode scoreMode = ScoreMode.ScoreByCommand;
 	private final Map<String, List<Vector>> spawnPoints = new HashMap<String, List<Vector>>();
 	//private final List<ItemStack> spawnEquip = new ArrayList<ItemStack>();
 	private final List<AA_SpawnEquip> spawnEquipDefinitions = new ArrayList<AA_SpawnEquip>();
 	private final List<String> allowedEditors = new ArrayList<String>();
-	//TODO highscore
+	private final List<Vector> highScoreSignLocations = new ArrayList<Vector>();
 
 	private boolean needsPersisting = true;
 	private boolean needsEnvironmentBackup = true;
@@ -39,6 +41,10 @@ public class AA_MiniGame {
 	private boolean lockedByEditSession = false;
 	private boolean inProgress = false;
 	private World world = null;
+
+	//play session. TODO persist or ensure consistency
+	//private final HashMap<String, List<Player>> teamPlayerMappings = new HashMap<String, List<Player>>();
+	private final HashMap<String, Integer> initialJoiners = new HashMap<String, Integer>();
 
 
 
@@ -60,6 +66,7 @@ public class AA_MiniGame {
 		set(AA_ConfigPaths.southEastMax, southEastMax);
 		set(AA_ConfigPaths.northWestMin, northWestMin);
 		set(AA_ConfigPaths.name, name);
+		set(AA_ConfigPaths.king, king);
 		set(AA_ConfigPaths.pvpDamage, pvpDamage);
 		set(AA_ConfigPaths.scoreMode, scoreMode.toString());
 		//set(AA_ConfigPaths.spawnPoints, spawnPoints);
@@ -68,6 +75,7 @@ public class AA_MiniGame {
 		}
 		set(AA_ConfigPaths.spawnEquip, spawnEquipDefinitions);
 		set(AA_ConfigPaths.allowedEditors, allowedEditors);
+		set(AA_ConfigPaths.highScoreSignLocations, highScoreSignLocations);
 		AA_MiniGameControl.saveMiniGameConfig();
 		needsPersisting = false;
 	}
@@ -87,6 +95,7 @@ public class AA_MiniGame {
 		mg.southEastMax = cfg.getVector(miniGameRootPath + "." + AA_ConfigPaths.southEastMax , null);
 		mg.northWestMin = cfg.getVector(miniGameRootPath + "." + AA_ConfigPaths.northWestMin , null);
 		mg.name = cfg.getString(miniGameRootPath + "." + AA_ConfigPaths.name , "newMiniGame");
+		mg.king = cfg.getString(miniGameRootPath + "." + AA_ConfigPaths.king , null);
 		mg.pvpDamage = cfg.getBoolean(miniGameRootPath + "." + AA_ConfigPaths.pvpDamage , false);
 		mg.scoreMode = ScoreMode.valueOf(cfg.getString(miniGameRootPath + "." + AA_ConfigPaths.scoreMode , ScoreMode.ScoreByCommand.toString()));
 		//fillSpawnPointMap(miniGameRootPath + "." + AA_ConfigPaths.spawnPoints, mg);
@@ -100,6 +109,7 @@ public class AA_MiniGame {
 		}
 		fillCollection(miniGameRootPath + "." + AA_ConfigPaths.spawnEquip, mg.getSpawnEquipDefinitions());
 		fillCollection(miniGameRootPath + "." + AA_ConfigPaths.allowedEditors, mg.allowedEditors);
+		fillCollection(miniGameRootPath + "." + AA_ConfigPaths.highScoreSignLocations, mg.highScoreSignLocations);
 		mg.needsPersisting = false;
 		return mg;
 	}
@@ -140,6 +150,14 @@ public class AA_MiniGame {
 	public void setName(final String name) {
 		this.name = name;
 		needsPersisting = true;
+	}
+
+	public String getKing() {
+		return king;
+	}
+	public void setKing(final String k) {
+		king = k;
+		persist();
 	}
 
 	public boolean isPvpDamage() {
@@ -238,14 +256,42 @@ public class AA_MiniGame {
 	}
 
 
+	public void registerHighScoreSignLocation(final Location location) {
+		if (!highScoreSignLocations.contains(location.toVector())) {
+			highScoreSignLocations.add(location.toVector());
+			needsPersisting = true;
+		}
+		final AA_MiniGame mg = this;
+		AdventureArena.executeDelayed(0.1, new Runnable() {
+			@Override
+			public void run() {
+				AA_ScoreManager.updateHighScoreList(mg);
+			}
+		});
+	}
+	public void unRegisterHighScoreSignLocation(final Location location) {
+		highScoreSignLocations.remove(location.toVector());
+		needsPersisting = true;
+	}
+	public void removeHighScoreSignLocation(final Vector v) {
+		highScoreSignLocations.remove(v);
+		needsPersisting = true;
+	}
 
+	public List<Vector> getHighScoreSignLocations() {
+		return highScoreSignLocations;
+	}
+
+	public World getWorld() {
+		return world;
+	}
 
 	//################## DIRTY & LOCK FLAGS ######################
 
 	public boolean needsPersisting() {
 		return needsPersisting;
 	}
-	public boolean needsEnvironmentBackup() {
+	public boolean needsEnvironmentBackup() { //TODO improve this with onBlockModify()
 		return needsEnvironmentBackup;
 	}
 	public boolean isLockedByEditSession() {
@@ -262,8 +308,6 @@ public class AA_MiniGame {
 		if (locked) {
 			needsEnvironmentBackup = true;
 		}
-		AA_MessageSystem.consoleWarn("lockedByEditSession: " + lockedByEditSession);
-
 		persist();
 	}
 	public void setInProgress(final boolean inProgress) {
@@ -327,7 +371,14 @@ public class AA_MiniGame {
 				+ ", northWestMin=" + northWestMin + ", name=" + name
 				+ ", pvpDamage=" + pvpDamage + ", scoreMode=" + scoreMode
 				+ ", #spawnPoints:" + getNumberOfSpawnPoints() + ", #spawnEquip:" + spawnEquipDefinitions.size()
-				+ ", allowedEditors=" + allowedEditors.toString() + "]";
+				+ ", allowedEditors=" + allowedEditors.toString()
+				+ ", #highScoreSignLocations: " + highScoreSignLocations.size()
+				+ ", needsEnvironmentBackup: " + needsEnvironmentBackup
+				+ ", inProgress: " + inProgress
+				+ ", lockedByEditSession: " + lockedByEditSession
+				+ ", initialJoiners: " + initialJoiners.toString()
+				+ ", remainingTeams: " + getTeamsAsMap().toString()
+				+ "]";
 	}
 
 	@Override
@@ -335,6 +386,111 @@ public class AA_MiniGame {
 		if (!(obj instanceof AA_MiniGame)) return false;
 		return id == ((AA_MiniGame) obj).getID();
 	}
+
+
+
+
+	public int getInitialNumberOfPlayers() {
+		int initialNumberOfPlayers = 0;
+		for (int n: initialJoiners.values()) {
+			initialNumberOfPlayers += n;
+		}
+		return initialNumberOfPlayers;
+	}
+
+	public int getInitialNumberOfTeams() {
+		return initialJoiners.keySet().size();
+	}
+
+
+	void addPlayer(final String teamName, final Player p) {
+		Team t = AA_TeamManager.getTeam(id + ":" + teamName);
+		if (t.hasPlayer(p)) return;
+		t.addPlayer(p);
+		if (initialJoiners.containsKey(teamName)) {
+			initialJoiners.put(teamName, initialJoiners.get(teamName)+1);
+		} else {
+			initialJoiners.put(teamName, 1);
+		}
+	}
+
+	void removePlayer(final Player p) {
+		Team t = AA_TeamManager.getTeam(p);
+		if (t==null) return;
+		t.removePlayer(p);
+		if (t.getSize()==0) {
+			t.unregister();
+		}
+	}
+
+	public void wipePlaySession() {
+		initialJoiners.clear();
+		for (Team t: getTeams()) {
+			AA_MessageSystem.consoleWarn("cleaning up team: " + t.getName());
+			t.unregister();
+		}
+		setInProgress(false);
+	}
+
+
+	public int getNumberOfPlayersRemaining() {
+		int totalPlayers = 0;
+		for (Team t: getTeams()) {
+			totalPlayers += t.getSize();
+		}
+		return totalPlayers;
+	}
+
+	//	public int numberOfPlayersLeft(final Team t) {
+	//		if (t==null) return 0;
+	//		return t.getSize();
+	//	}
+	public int getNumberOfEnemiesRemaining(final Team team) {
+		int totalEnemies = 0;
+		if (isTeamPlayMode()) {
+			for (Team t: getTeams()) {
+				if (!t.equals(team)) {
+					totalEnemies += t.getSize();
+				}
+			}
+		} else {
+			totalEnemies = getNumberOfPlayersRemaining();
+		}
+		return totalEnemies;
+	}
+
+
+
+	private boolean isTeamPlayMode() {
+		return getInitialNumberOfTeams()>1;
+	}
+
+	public List<Team> getTeams() {
+		String teamNameIdPrefix = String.valueOf(id) + ":";
+		List<Team> miniGameTeams = new ArrayList<Team>();
+
+		for (Team t: AA_TeamManager.scoreBoard.getTeams()) {
+			if (t.getName().startsWith(teamNameIdPrefix)) {
+				miniGameTeams.add(t);
+			}
+		}
+		return miniGameTeams;
+	}
+
+	public HashMap<String, Integer> getTeamsAsMap() {
+		HashMap<String, Integer> teams = new HashMap<String, Integer>();
+
+		for (Team t: getTeams()) {
+			teams.put(t.getName(), t.getSize());
+		}
+		return teams;
+	}
+
+	public boolean isVictory() {
+		return !isTeamPlayMode() && getNumberOfPlayersRemaining()<=1 || isTeamPlayMode() && getTeams().size()<=1;
+	}
+
+
 
 
 

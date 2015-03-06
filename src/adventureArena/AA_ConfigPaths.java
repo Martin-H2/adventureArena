@@ -26,11 +26,13 @@ public class AA_ConfigPaths {
 	public static final String southEastMax = "southEastMax";
 	public static final String northWestMin = "northWestMin";
 	public static final String name = "name";
+	public static final String king = "king";
 	public static final String pvpDamage = "pvpDamage";
 	public static final String scoreMode = "scoreMode";
 	public static final String spawnPoints = "spawnPoints";
 	public static final String spawnEquip = "spawnEquip";
 	public static final String allowedEditors = "allowedEditors";
+	public static final String highScoreSignLocations = "highScoreSignLocations";
 	public static final String needsEnvironmentBackup = "needsEnvironmentBackup";
 	public static final String lockedByEditSession = "lockedByEditSession";
 	public static final String inProgress = "inProgress";
