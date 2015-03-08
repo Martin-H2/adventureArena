@@ -87,6 +87,10 @@ public class AA_MessageSystem {
 
 
 
+
+	public static void consoleDebug(final Object o) {
+		CONSOLE_SENDER.sendMessage(ChatColor.GRAY + "[AA] " + ChatColor.AQUA + "DEBUG - " +  o);
+	}
 	public static void consoleInfo(final Object o) {
 		CONSOLE_SENDER.sendMessage(ChatColor.GRAY + "[AA] " + ChatColor.DARK_GRAY + o);
 	}

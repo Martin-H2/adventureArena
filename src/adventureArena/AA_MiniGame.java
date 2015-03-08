@@ -34,6 +34,8 @@ public class AA_MiniGame {
 	private final List<AA_SpawnEquip> spawnEquipDefinitions = new ArrayList<AA_SpawnEquip>();
 	private final List<String> allowedEditors = new ArrayList<String>();
 	private final List<Vector> highScoreSignLocations = new ArrayList<Vector>();
+	private final List<AA_MonsterTrigger> rangedMonsterTriggers = new ArrayList<AA_MonsterTrigger>();
+	private final List<AA_MonsterTrigger> startMonsterTriggers = new ArrayList<AA_MonsterTrigger>();
 
 	private boolean needsPersisting = true;
 	private boolean needsEnvironmentBackup = true;
@@ -45,6 +47,7 @@ public class AA_MiniGame {
 	//play session. TODO persist or ensure consistency
 	//private final HashMap<String, List<Player>> teamPlayerMappings = new HashMap<String, List<Player>>();
 	private final HashMap<String, Integer> initialJoiners = new HashMap<String, Integer>();
+	private boolean isOver = false;
 
 
 
@@ -74,6 +77,8 @@ public class AA_MiniGame {
 			set(AA_ConfigPaths.spawnPoints + "." + teamName, spawnPoints.get(teamName));
 		}
 		set(AA_ConfigPaths.spawnEquip, spawnEquipDefinitions);
+		set(AA_ConfigPaths.rangedMonsterTriggers, rangedMonsterTriggers);
+		set(AA_ConfigPaths.startMonsterTriggers, startMonsterTriggers);
 		set(AA_ConfigPaths.allowedEditors, allowedEditors);
 		set(AA_ConfigPaths.highScoreSignLocations, highScoreSignLocations);
 		AA_MiniGameControl.saveMiniGameConfig();
@@ -108,6 +113,8 @@ public class AA_MiniGame {
 			}
 		}
 		fillCollection(miniGameRootPath + "." + AA_ConfigPaths.spawnEquip, mg.getSpawnEquipDefinitions());
+		fillCollection(miniGameRootPath + "." + AA_ConfigPaths.rangedMonsterTriggers, mg.rangedMonsterTriggers);
+		fillCollection(miniGameRootPath + "." + AA_ConfigPaths.startMonsterTriggers, mg.startMonsterTriggers);
 		fillCollection(miniGameRootPath + "." + AA_ConfigPaths.allowedEditors, mg.allowedEditors);
 		fillCollection(miniGameRootPath + "." + AA_ConfigPaths.highScoreSignLocations, mg.highScoreSignLocations);
 		mg.needsPersisting = false;
@@ -202,6 +209,37 @@ public class AA_MiniGame {
 		}
 		spawnPoints.get(teamName).remove(loc);
 		needsPersisting = true;
+	}
+
+	public void addMonsterTrigger(final AA_MonsterTrigger monsterTrigger) {
+		if(monsterTrigger.isSpawnTrigger()) {
+			startMonsterTriggers.add(monsterTrigger);
+		} else {
+			rangedMonsterTriggers.add(monsterTrigger);
+		}
+		needsPersisting = true;
+	}
+	public void removeMonsterTriggerBySignPos(final Vector monsterTriggerSignPos) {
+		for (Iterator<AA_MonsterTrigger> iter = startMonsterTriggers.iterator(); iter.hasNext();) {
+			AA_MonsterTrigger mt = iter.next();
+			if (monsterTriggerSignPos.equals(mt.getSignPos())) {
+				iter.remove();
+				needsPersisting = true;
+			}
+		}
+		for (Iterator<AA_MonsterTrigger> iter = rangedMonsterTriggers.iterator(); iter.hasNext();) {
+			AA_MonsterTrigger mt = iter.next();
+			if (monsterTriggerSignPos.equals(mt.getSignPos())) {
+				iter.remove();
+				needsPersisting = true;
+			}
+		}
+	}
+	public List<AA_MonsterTrigger> getRangedMonsterTriggers() {
+		return rangedMonsterTriggers;
+	}
+	public List<AA_MonsterTrigger> getStartMonsterTriggers() {
+		return startMonsterTriggers;
 	}
 
 	public List<AA_SpawnEquip> getSpawnEquipDefinitions() {
@@ -352,9 +390,9 @@ public class AA_MiniGame {
 
 	boolean isInsideBounds(final Location loc) {
 		if(southEastMax==null || northWestMin==null) return false;
-		return southEastMax.getX() >= loc.getX() && northWestMin.getX() <= loc.getX()
-				&& southEastMax.getY() >= loc.getY() && northWestMin.getY() <= loc.getY()
-				&& southEastMax.getZ() >= loc.getZ() && northWestMin.getZ() <= loc.getZ();
+		return southEastMax.getX()+1 >= loc.getX() && northWestMin.getX() <= loc.getX()
+				&& southEastMax.getY()+1 >= loc.getY() && northWestMin.getY() <= loc.getY()
+				&& southEastMax.getZ()+1 >= loc.getZ() && northWestMin.getZ() <= loc.getZ();
 	}
 
 	public int getNumberOfSpawnPoints() {
@@ -376,6 +414,8 @@ public class AA_MiniGame {
 				+ ", needsEnvironmentBackup: " + needsEnvironmentBackup
 				+ ", inProgress: " + inProgress
 				+ ", lockedByEditSession: " + lockedByEditSession
+				+ ", isSoloPlayable: " + isSoloPlayable()
+				+ ", numberOfPlayersRemaining: " + getNumberOfPlayersRemaining()
 				+ ", initialJoiners: " + initialJoiners.toString()
 				+ ", remainingTeams: " + getTeamsAsMap().toString()
 				+ "]";
@@ -404,7 +444,7 @@ public class AA_MiniGame {
 
 
 	void addPlayer(final String teamName, final Player p) {
-		Team t = AA_TeamManager.getTeam(id + ":" + teamName);
+		Team t = AA_TeamManager.getTeam(id + ":" + teamName, this);
 		if (t.hasPlayer(p)) return;
 		t.addPlayer(p);
 		if (initialJoiners.containsKey(teamName)) {
@@ -425,11 +465,18 @@ public class AA_MiniGame {
 
 	public void wipePlaySession() {
 		initialJoiners.clear();
+		isOver = false;
 		for (Team t: getTeams()) {
 			AA_MessageSystem.consoleWarn("cleaning up team: " + t.getName());
 			t.unregister();
 		}
 		setInProgress(false);
+		for (AA_MonsterTrigger mt: startMonsterTriggers) {
+			mt.reset();
+		}
+		for (AA_MonsterTrigger mt: rangedMonsterTriggers) {
+			mt.reset();
+		}
 	}
 
 
@@ -447,7 +494,7 @@ public class AA_MiniGame {
 	//	}
 	public int getNumberOfEnemiesRemaining(final Team team) {
 		int totalEnemies = 0;
-		if (isTeamPlayMode()) {
+		if (isTeamPlayModeActive()) {
 			for (Team t: getTeams()) {
 				if (!t.equals(team)) {
 					totalEnemies += t.getSize();
@@ -461,8 +508,12 @@ public class AA_MiniGame {
 
 
 
-	private boolean isTeamPlayMode() {
+	public boolean isTeamPlayModeActive() {
 		return getInitialNumberOfTeams()>1;
+	}
+
+	public boolean isSoloPlayable() {
+		return scoreMode==ScoreMode.ScoreByCommand || scoreMode==ScoreMode.KillsPerDeath && !pvpDamage;
 	}
 
 	public List<Team> getTeams() {
@@ -487,8 +538,24 @@ public class AA_MiniGame {
 	}
 
 	public boolean isVictory() {
-		return !isTeamPlayMode() && getNumberOfPlayersRemaining()<=1 || isTeamPlayMode() && getTeams().size()<=1;
+		boolean soloPlayable = isSoloPlayable();
+		boolean teamPlayModeActive = isTeamPlayModeActive();
+		int numberOfPlayersRemaining = getNumberOfPlayersRemaining();
+		return numberOfPlayersRemaining==0 || !soloPlayable && (!teamPlayModeActive && numberOfPlayersRemaining<=1 || teamPlayModeActive && getTeams().size()<=1);
 	}
+
+
+
+
+	public boolean isOver() {
+		return isOver;
+	}
+
+	public void setOver() {
+		isOver = true;
+	}
+
+
 
 
 

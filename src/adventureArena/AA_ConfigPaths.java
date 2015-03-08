@@ -37,6 +37,9 @@ public class AA_ConfigPaths {
 	public static final String lockedByEditSession = "lockedByEditSession";
 	public static final String inProgress = "inProgress";
 
+	public static final String rangedMonsterTriggers = "rangedMonsterTriggers";
+	public static final String startMonsterTriggers = "startMonsterTriggers";
+
 
 
 

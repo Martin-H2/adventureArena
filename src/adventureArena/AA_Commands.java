@@ -29,9 +29,16 @@ public class AA_Commands implements CommandExecutor {
 	public boolean onCommand(final CommandSender sender, final Command command, final String label, final String[] args) {
 		String commandName = command.getName();
 
-		if (commandName.equals(mg) && args.length == 1 && args[0].equals("info") && sender instanceof Player)  {
-			AA_MiniGameControl.surroundingMiniGameInfo((Player) sender);
-			return true;
+		if (commandName.equals(mg) && args.length == 1 && sender instanceof Player) {
+			Player player = (Player) sender;
+			if(args[0].equals("info")) {
+				AA_MiniGameControl.surroundingMiniGameInfo(player);
+				return true;
+			}
+			if(args[0].equals("resetScore") && AA_MiniGameControl.isPlayerInsideHisEditableArea(player)) {
+				AA_ScoreManager.surroundingMiniGameScoreReset(player);
+				return true;
+			}
 		}
 
 		// ############### OPERATOR ONLY #################

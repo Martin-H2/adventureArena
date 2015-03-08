@@ -105,7 +105,12 @@ public class AA_MiniGameControl {
 				miniGames.add(mg);
 				if (mg.isInProgress()) {
 					AA_MessageSystem.consoleWarn("miniGame was still in progress: '" + mg.getName() + "', cleaning up...");
+
+					mg.setInProgress(false);
+					mg.wipeEntities();
 					mg.wipePlaySession();
+					mg.restoreEnvironmentBackup();
+
 				}
 			}
 		}
@@ -208,7 +213,6 @@ public class AA_MiniGameControl {
 
 
 
-
 	// ################ MINIGAME PROGRESS ##################
 
 	static boolean canJoinMiniGame(final AA_MiniGame miniGame, final ArrayList<Player> players) {
@@ -235,14 +239,17 @@ public class AA_MiniGameControl {
 	}
 
 
+	@SuppressWarnings("deprecation")
 	static void joinMiniGame(final AA_MiniGame miniGame, final String teamName, final Player p, final Vector vector) {
 		if (!isWatchingMiniGames(p)) return;
 		AA_MessageSystem.success("Starting " + miniGame.getName() + " for you...", p);
 		setNeutralPlayerState(p);
+		p.setGameMode(MINIGAME_HUB_GAMEMODE);
 		teleportSafe(p, AA_TerrainHelper.getAirBlockAboveGround(vector.toLocation(p.getWorld()), true));
 		setPlayerState(p, PlayerState.IS_PLAYING,miniGame);
 		miniGame.addPlayer(teamName, p);
 		p.getInventory().addItem(miniGame.getSpawnEquip());
+		p.updateInventory();
 	}
 
 	static void setPlayerState(final Player p, final PlayerState playerState, final AA_MiniGame optionalMiniGame) {
@@ -264,41 +271,56 @@ public class AA_MiniGameControl {
 	}
 
 	public static void leaveCurrentMiniGame(final Player player, final boolean onDeath) {
-		AA_MiniGame mg = getMiniGameForPlayer(player);
+		final AA_MiniGame mg = getMiniGameForPlayer(player);
 		//Team team = AA_TeamManager.getTeam(player);
 		mg.removePlayer(player);
-		AA_ScoreManager.onPlayerLeft(mg, player);
 		if (isEditingMiniGame(player)) {
 			if (mg.getNumberOfPlayersRemaining()==0) {
 				mg.setLockedByEditSession(false);
-				mg.wipeEntities();
+				mg.wipePlaySession();
 			}
 			AA_InventorySaver.saveInventoryAndPlayerMeta(player, AA_ConfigPaths.savedCreativeData);
 		} else if (isPlayingMiniGame(player)) {
+			AA_ScoreManager.onPlayerLeft(mg, player);
 			if (mg.isVictory()) {
-				win(mg);
-				mg.setInProgress(false);
-				mg.wipeEntities();
-				mg.wipePlaySession();
-				AA_MessageSystem.sideNoteForGroup("All players left your " + mg.getName() + ". Rolling back environment...", mg.getAllowedEditors());
-				mg.restoreEnvironmentBackup();
+				mg.setOver();
+				AdventureArena.executeDelayed(1, new Runnable() {
+					@Override
+					public void run() {
+						win(mg);
+						mg.setInProgress(false);
+						mg.wipeEntities();
+						mg.wipePlaySession();
+						AA_MessageSystem.sideNoteForGroup("All players left your " + mg.getName() + ". Rolling back environment...", mg.getAllowedEditors());
+						mg.restoreEnvironmentBackup();
+					}
+				});
 			}
+			AA_ScoreManager.updateHighScoreList(mg);
 		}
 		setMiniGameSpectator(player, onDeath);
-		AA_ScoreManager.updateHighScoreList(mg);
 	}
 
 	private static void win(final AA_MiniGame mg) {
 		for (Player p: Bukkit.getOnlinePlayers()) {
 			AA_MiniGame playersMG = getMiniGameForPlayer(p);
-			if (mg.equals(playersMG)) {
-				AA_MessageSystem.success("You won " + mg.getName(), p);
-				AA_ScoreManager.onPlayerWin(mg, p);
-				mg.removePlayer(p);
-				setMiniGameSpectator(p, false);
+			if (mg.equals(playersMG) && isPlayingMiniGame(p)) {
+				if (!p.isDead()) {
+					AA_MessageSystem.success("You won " + mg.getName(), p);
+					AA_ScoreManager.onPlayerWin(mg, p);
+					mg.removePlayer(p);
+					setMiniGameSpectator(p, false);
+				} else {
+					//TODO dead spect
+				}
 			}
 		}
-
+		AdventureArena.executeDelayed(0.2, new Runnable() {
+			@Override
+			public void run() {
+				AA_ScoreManager.updateHighScoreList(mg);
+			}
+		});
 	}
 
 
@@ -349,6 +371,7 @@ public class AA_MiniGameControl {
 	public static void setNeutralPlayerState(final Player player) {
 		PlayerInventory inventory = player.getInventory();
 		player.setHealth(player.getMaxHealth());
+		player.setFireTicks(0);
 		player.setFoodLevel(20);
 		player.setSaturation(20);
 		inventory.clear();

@@ -54,29 +54,34 @@ public class AA_ScoreManager {
 				signState.setLine(0, getHighScoreHeading(mg));
 				signState.update();
 				int globalLineIndex = 1;
-				for (Entry<String, Double> entry: getSortedHighscoreList(mg)) {
-					ChatColor color = ChatColor.BLACK;
-					String playerName = entry.getKey();
-					long score = Math.round(entry.getValue());
-					if (globalLineIndex==1) {
-						color = ChatColor.GREEN;
-						String king = mg.getKing();
-						if (!playerName.equals(king)) {
-							AA_MessageSystem.broadcast(ChatColor.GOLD + "[" + mg.getName() + "] NEW HIGHSCORE - " + ChatColor.UNDERLINE + playerName
-									+ ChatColor.GOLD + ": " + score);
+				List<Entry<String, Double>> sortedHighscoreList = getSortedHighscoreList(mg);
+				while (signState!=null) {
+					int index = globalLineIndex-1;
+					if (index<sortedHighscoreList.size()) {
+						Entry<String, Double> entry = sortedHighscoreList.get(globalLineIndex-1);
+						ChatColor color = ChatColor.BLACK;
+						String playerName = entry.getKey();
+						long score = Math.round(entry.getValue());
+						if (globalLineIndex==1) {
+							color = ChatColor.GREEN;
+							String oldKing = mg.getKing();
+							if (!playerName.equals(oldKing)) {
+								AA_MessageSystem.broadcast(ChatColor.GOLD + "[" + mg.getName() + "] NEW HIGHSCORE LEADER: " + score + " by " + ChatColor.RED + playerName);
+								mg.setKing(playerName);
+							}
 						}
+						else if (globalLineIndex==2) {
+							color = ChatColor.DARK_GREEN;
+						}
+						signState.setLine(globalLineIndex % 4, ChatColor.GRAY.toString() + globalLineIndex + "." + color.toString() + playerName + ": " + score);
+					} else {
+						signState.setLine(globalLineIndex % 4, " ");
 					}
-					else if (globalLineIndex==2) {
-						color = ChatColor.DARK_GREEN;
-					}
-					signState.setLine(globalLineIndex % 4, ChatColor.GRAY.toString() + globalLineIndex + "." + color.toString() + playerName + ": " + score);
+
 					signState.update();
 					globalLineIndex++;
 					if (globalLineIndex % 4 == 0) {
-						signState = getNextSignState(signBlock);
-						if (signState==null) {
-							break;
-						}
+						signState = getNextSignState(signBlock, globalLineIndex/4);
 					}
 				}
 			} else {
@@ -91,8 +96,8 @@ public class AA_ScoreManager {
 		}
 	}
 
-	private static Sign getNextSignState(final Block signBlock) {
-		Block next = signBlock.getRelative(BlockFace.DOWN);
+	private static Sign getNextSignState(final Block signBlock, final int i) {
+		Block next = signBlock.getRelative(BlockFace.DOWN, i);
 		if (next.getState() instanceof Sign)
 			return (Sign) next.getState();
 		else
@@ -115,8 +120,10 @@ public class AA_ScoreManager {
 			st = ScoreType.LTS_RATING;
 		}
 		ConfigurationSection scores = getHighscoreConfig().getConfigurationSection( mg.getID() + "." + st.toString());
-		for (String playerName: scores.getKeys(false)) {
-			sortedHighscoreList.put(playerName, scores.getDouble(playerName));
+		if (scores != null) {
+			for (String playerName: scores.getKeys(false)) {
+				sortedHighscoreList.put(playerName, scores.getDouble(playerName));
+			}
 		}
 		return Util.sortByValue(sortedHighscoreList, false);
 	}
@@ -151,23 +158,35 @@ public class AA_ScoreManager {
 
 	public static void onPlayerLeft(final AA_MiniGame mg, final Player player) {
 		if(mg.getScoreMode() == ScoreMode.LastManStanding) {
-			int i = mg.getInitialNumberOfPlayers();
-			int p = mg.getNumberOfPlayersRemaining();
-			double score = 1-2*p/(i-1);
-			AA_MessageSystem.consoleWarn("LastManStanding: "+player.getName()+" got "+score*AVERAGE_SCORESTEAL+" points ("+p+"/"+i+" still in game)");
+			double i = mg.getInitialNumberOfPlayers();
+			double p = mg.getNumberOfPlayersRemaining();
+			double score = 1.0 - 2.0*p / (i-1.0);
+			AA_MessageSystem.consoleDebug("LastManStanding: "+player.getName()+" got "+score*AVERAGE_SCORESTEAL+" points ("+p+"/"+i+" still in game)");
 			double ltsRating = getScore(mg, ScoreType.LTS_RATING, player, DEFAULT_RATING);
-			setScore(mg, ScoreType.LTS_RATING, player, ltsRating+score*AVERAGE_SCORESTEAL);
+			setScore(mg, ScoreType.LTS_RATING, player, ltsRating + score*AVERAGE_SCORESTEAL);
 		}
 	}
 
 	public static void onPlayerWin(final AA_MiniGame mg, final Player player) {
 		if(mg.getScoreMode() == ScoreMode.LastManStanding) {
-			AA_MessageSystem.consoleWarn("LastManStanding: "+player.getName()+" got "+AVERAGE_SCORESTEAL+" points for winning");
+			AA_MessageSystem.consoleDebug("LastManStanding: "+player.getName()+" got "+AVERAGE_SCORESTEAL+" points for winning");
 			double ltsRating = getScore(mg, ScoreType.LTS_RATING, player, DEFAULT_RATING);
 			setScore(mg, ScoreType.LTS_RATING, player, ltsRating+AVERAGE_SCORESTEAL);
 		}
 	}
 
+	public static void onSetScoreCmd(final Player p, final double newScore) {
+		AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(p);
+		if (mg!=null && AA_MiniGameControl.isPlayingMiniGame(p)) {
+			double oldScore = getScore(mg, ScoreType.CMD_RATING, p, 0.0);
+			if (oldScore!=newScore) {
+				if (mg.getScoreMode()==ScoreMode.ScoreByCommand) {
+					AA_MessageSystem.success("Your " + mg.getName() + " score is now: " + ChatColor.GOLD + Math.round(newScore), p);
+				}
+				setScore(mg, ScoreType.CMD_RATING, p, newScore);
+			}
+		}
+	}
 
 
 
@@ -191,6 +210,18 @@ public class AA_ScoreManager {
 		addScore(mg, st, p, 1.0);
 	}
 
+	public static void surroundingMiniGameScoreReset(final Player player) {
+		//FIXME test HS: delete empty lines
+		AA_MiniGame mg = AA_MiniGameControl.getMiniGameContainingLocation(player.getLocation());
+		if (mg!=null) {
+			AA_MessageSystem.sideNote("Resetting highScore for " + mg.getName(), player);
+			getHighscoreConfig().set(String.valueOf(mg.getID()), null);
+			saveHighscoreConfig();
+			updateHighScoreList(mg);
+		} else {
+			AA_MessageSystem.error("You are not inside a miniGame area", player);
+		}
+	}
 
 
 
@@ -228,6 +259,7 @@ public class AA_ScoreManager {
 			}
 		}
 	}
+
 
 
 

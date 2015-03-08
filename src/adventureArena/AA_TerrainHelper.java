@@ -2,12 +2,15 @@ package adventureArena;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.Sign;
 import org.bukkit.util.Vector;
 
 import com.sk89q.worldedit.CuboidClipboard;
@@ -20,6 +23,9 @@ public class AA_TerrainHelper {
 
 
 
+	static Location getAirBlockAboveGroundTelePos(final Location start, final boolean searchUpwards) {
+		return getAirBlockAboveGround(start.getBlock(), searchUpwards).getLocation().add(0.5, 0, 0.5);
+	}
 	static Block getAirBlockAboveGround(final Location start, final boolean searchUpwards) {
 		return getAirBlockAboveGround(start.getBlock(), searchUpwards);
 	}
@@ -54,6 +60,34 @@ public class AA_TerrainHelper {
 
 
 
+	public static List<Block> getAttachedSigns(final Block block) {
+		List<Block> attachedSigns = new ArrayList<Block>();
+		if(isAttachedSign(block.getRelative(BlockFace.UP), BlockFace.UP)) {
+			attachedSigns.add(block.getRelative(BlockFace.UP));
+		}
+		if(isAttachedSign(block.getRelative(BlockFace.NORTH), BlockFace.NORTH)) {
+			attachedSigns.add(block.getRelative(BlockFace.NORTH));
+		}
+		if(isAttachedSign(block.getRelative(BlockFace.SOUTH), BlockFace.SOUTH)) {
+			attachedSigns.add(block.getRelative(BlockFace.SOUTH));
+		}
+		if(isAttachedSign(block.getRelative(BlockFace.EAST), BlockFace.EAST)) {
+			attachedSigns.add(block.getRelative(BlockFace.EAST));
+		}
+		if(isAttachedSign(block.getRelative(BlockFace.WEST), BlockFace.WEST)) {
+			attachedSigns.add(block.getRelative(BlockFace.WEST));
+		}
+		return attachedSigns;
+	}
+	private static boolean isAttachedSign(final Block signBlock, final BlockFace searchDirection) {
+		if (signBlock!=null && signBlock.getState() instanceof Sign) {
+			Sign signState =  (Sign) signBlock.getState();
+			org.bukkit.material.Sign signData = (org.bukkit.material.Sign) signState.getData();
+			return signData.getAttachedFace().getOppositeFace() == searchDirection;
+		}
+		else return false;
+	}
+
 
 
 
@@ -62,10 +96,11 @@ public class AA_TerrainHelper {
 	// ##################### SCHEMATIC SAVING LOADING ###########################
 
 	public static boolean saveMiniGameToSchematic(final Vector northWestMin, final Vector southEastMax, final int id, final World world) {
-		// TODO save & load async ?
+		//TODO save & load async ?
 		File file = getMiniGameFile(id);
+		int specRoomHeight = 3; //TODO dynamic spec room height
 		com.sk89q.worldedit.Vector min = new com.sk89q.worldedit.Vector(northWestMin.getX(),northWestMin.getY(),northWestMin.getZ());
-		com.sk89q.worldedit.Vector max = new com.sk89q.worldedit.Vector(southEastMax.getX(),southEastMax.getY(),southEastMax.getZ());
+		com.sk89q.worldedit.Vector max = new com.sk89q.worldedit.Vector(southEastMax.getX(),southEastMax.getY()-specRoomHeight ,southEastMax.getZ());
 		EditSession es = WorldEdit.getInstance().getEditSessionFactory().getEditSession(new BukkitWorld(world), -1);
 
 		CuboidClipboard cc = new CuboidClipboard(max.subtract(min).add(new com.sk89q.worldedit.Vector(1, 1, 1)), min);

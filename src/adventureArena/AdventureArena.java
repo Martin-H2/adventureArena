@@ -23,6 +23,7 @@ public class AdventureArena extends JavaPlugin {
 		}
 
 		ConfigurationSerialization.registerClass(AA_SpawnEquip.class);
+		ConfigurationSerialization.registerClass(AA_MonsterTrigger.class);
 		instance = this;
 		getServer().getPluginManager().registerEvents(new AA_Events(), this);
 		new AA_Commands(this);
@@ -35,9 +36,12 @@ public class AdventureArena extends JavaPlugin {
 		return instance;
 	}
 
+	public static void cancelTask(final int id) {
+		instance.getServer().getScheduler().cancelTask(id);
+	}
 
-	public static void executeDelayed(final double delaySec, final Runnable runnable) {
-		instance.getServer().getScheduler().scheduleSyncDelayedTask(instance, runnable, (long) (delaySec*20));
+	public static int executeDelayed(final double delaySec, final Runnable runnable) {
+		return instance.getServer().getScheduler().scheduleSyncDelayedTask(instance, runnable, (long) (delaySec*20));
 	}
 
 	public static void executePeriodically(final int delaySec, final Runnable runnable) {

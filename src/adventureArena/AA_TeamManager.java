@@ -33,17 +33,17 @@ public class AA_TeamManager {
 		return scoreBoard.getPlayerTeam(p);
 	}
 
-	public static Team getTeam(final String idAndTeamName) {
+	public static Team getTeam(final String idAndTeamName, final AA_MiniGame mg) {
 		Team team = scoreBoard.getTeam(idAndTeamName);
 		if (team==null) {
-			team = registerTeam(idAndTeamName);
+			team = registerTeam(idAndTeamName, mg);
 		}
 		return team;
 	}
 
-	private static Team registerTeam(final String idAndTeamName) {
+	private static Team registerTeam(final String idAndTeamName, final AA_MiniGame mg) {
 		Team team = scoreBoard.registerNewTeam(idAndTeamName);
-		team.setAllowFriendlyFire(idAndTeamName.endsWith(FFA_TEAM));
+		team.setAllowFriendlyFire(idAndTeamName.endsWith(FFA_TEAM) && mg.isPvpDamage());
 		team.setCanSeeFriendlyInvisibles(true);
 		return team;
 	}
@@ -61,6 +61,11 @@ public class AA_TeamManager {
 			}
 		}
 		if (playersAroundSign.size()==0) return;
+		if (playersAroundSign.size()<=1 && !miniGame.isSoloPlayable()) {
+			AA_MessageSystem.errorForGroup("You need more people for this arena.", playersAroundSign);
+			return;
+		}
+
 
 		if (AA_MiniGameControl.canJoinMiniGame(miniGame, playersAroundSign) && AA_TeamManager.canTeamJoinMiniGame(miniGame, teamName, playersAroundSign)) {
 			if (teamName.equals(FFA_TEAM)) {
@@ -122,6 +127,11 @@ public class AA_TeamManager {
 				AA_MessageSystem.error("No more spawnpoints in " + miniGame.getName() + " for team " + teamName + ". You can't participate.", p);
 			}
 		}
+
+		for (AA_MonsterTrigger mt: miniGame.getStartMonsterTriggers()) {
+			mt.checkAndTrigger(miniGame.getWorld());
+		}
+
 	}
 
 

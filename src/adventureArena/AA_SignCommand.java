@@ -13,6 +13,7 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.block.SignChangeEvent;
@@ -21,7 +22,11 @@ public class AA_SignCommand {
 
 	private static final String ENCHANT_IDS_HELP = ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "hub.spigotmc.org/javadocs/bukkit/org/bukkit/enchantments/Enchantment.html";
 	private static final String MATERIAL_IDS_HELP = ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html";
+	private static final String ENTITY_IDS_HELP = ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "hub.spigotmc.org/javadocs/bukkit/org/bukkit/entity/EntityType.html";
 	private static final double PLAYER_COMMAND_DELAY_SEC = 1.0;
+	private static final String DELIM_MINUS = "(-)|(- )|( - )|( -)";
+	private static final String DELIM_KOMMA = "(,)|(, )|( , )|( ,)";
+	private static final String DELIM_ASSIGN = "(:)|(: )|( : )|(=)|(= )|( = )";
 
 	private static List<String> commands;
 	static {
@@ -30,13 +35,12 @@ public class AA_SignCommand {
 		commands.add("settings");
 		commands.add("spawnEquip");
 		commands.add("spawn");
-		commands.add("score");
 		commands.add("start");
 		commands.add("edit");
 		commands.add("exit");
 		commands.add("highScore");
 		commands.add("@start");
-		commands.add("@near");
+		commands.add("@distance");
 	}
 	static HashSet<UUID> playersWithCommandTimeout = new HashSet<UUID>();
 
@@ -110,7 +114,13 @@ public class AA_SignCommand {
 
 
 
-	public boolean executeOnBreak(final Player breaker, final Cancellable c) {
+	public boolean executeOnBreak(final Player breaker, final Cancellable c, final boolean isEditmode) {
+		if (!isEditmode) {
+			if (isClickCommand()) {
+				c.setCancelled(true);
+			}
+			return false;
+		}
 		if (!commands.contains(command))
 			return false;
 
@@ -150,17 +160,11 @@ public class AA_SignCommand {
 			}
 		}
 		else if (command.equals("spawnEquip")) {
-			//			List<ItemStack> spawnEquipToRemove = new ArrayList<ItemStack>();
-			//			for (String itemName: parameterMap.keySet()) {
-			//				try {
-			//					Material mat = Material.valueOf(itemName.toUpperCase());
-			//					if (validateIntParamater(breaker, itemName, 1, 64)) {
-			//						spawnEquipToRemove.add(new ItemStack(mat, Integer.parseInt(parameterMap.get(itemName))));
-			//					}
-			//				} catch (IllegalArgumentException e) {}
-			//			}
 			miniGame.removeSpawnEquipBySignPos(signBlock.getLocation().toVector());
 			AA_MessageSystem.success("(" + miniGame.getSpawnEquipDefinitions().size() + "x SpawnEquip left)", breaker);
+		}
+		else if (command.equals("@distance")) {
+			miniGame.removeMonsterTriggerBySignPos(signBlock.getLocation().toVector());
 		}
 		else if (command.equals("spawn")) {
 			String teamName;
@@ -171,9 +175,6 @@ public class AA_SignCommand {
 			}
 			miniGame.removeSpawnPoint(teamName, attachedBlock.getLocation());
 			AA_MessageSystem.success("(" + miniGame.getNumberOfSpawnPoints() + " SpawnPoints left)", breaker);
-		}
-		else if (command.equals("score")) {
-			//TODO add score
 		}
 		else if (command.equals("highScore")) {
 			if (miniGame==null) {
@@ -268,20 +269,6 @@ public class AA_SignCommand {
 			}
 		}
 		else if (command.equals("spawnEquip")) {
-			//			List<ItemStack> newSpawnEquip = new ArrayList<ItemStack>();
-			//			for (String itemName: parameterMap.keySet()) {
-			//				try {
-			//					Material mat = Material.valueOf(itemName.toUpperCase());
-			//					if (validateIntParamater(creator, itemName, 1, 64)) {
-			//						newSpawnEquip.add(new ItemStack(mat, Integer.parseInt(parameterMap.get(itemName))));
-			//					}
-			//				} catch (IllegalArgumentException e) {
-			//					failAndBreak(creator, "Unknown item ID: " + highlightColor() + itemName + errorColor() + ", see all IDs here: "+ MATERIAL_IDS_HELP);
-			//					return false;
-			//				}
-			//			}
-			//			miniGame.addSpawnEquip(newSpawnEquip);
-
 			if (parameterMap.size()==0) {
 				failAndBreak(creator, "No item specified");
 			}
@@ -357,14 +344,74 @@ public class AA_SignCommand {
 			}
 			miniGame.addSpawnPoint(teamName, attachedBlock.getLocation());
 		}
-		else if (command.equals("score")) {
-			//TODO add / set score
-		}
 		else if (command.equals("highScore")) {
 			miniGame.registerHighScoreSignLocation(signBlock.getLocation());
 		}
-		else if (command.equals("@start")) {
-			//signBlock.getWorld().spawnEntity(loc, type)
+		else if (command.equals("@distance") || command.equals("@start")) {
+			if (command.equals("@distance") && !parameterMap.containsKey("radius")) {
+				failAndBreak(creator, "Missing radius. Example: " + ultraHighlightColor() + "[@distance:5]");
+				return false;
+			}
+			try {
+				double radius = 1000;
+				if (command.equals("@distance")) {
+					radius = Double.parseDouble(parameterMap.get("radius"));
+					parameterMap.remove("radius");
+				}
+				double delay = -1;
+				double delayRngRange = 0;
+				boolean explode = false;
+				int newScore = -1;
+				if (parameterMap.containsKey("setScore")) {
+					if (miniGame.getScoreMode()!=ScoreMode.ScoreByCommand) {
+						creator.sendMessage(ChatColor.RED + "[WARNING] score set by sign is only displayed on highScore lists when scoreMode:cmd under [settings]");
+					}
+					if (!validateIntParamater(creator, "setScore", 0, 999)) return false;
+					newScore = Integer.parseInt(parameterMap.get("setScore"));
+					AA_MonsterTrigger mt = new AA_MonsterTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, newScore);
+					miniGame.addMonsterTrigger(mt);
+				} else {
+					if (parameterMap.containsKey("delay")) {
+						String delayAndRange = parameterMap.get("delay");
+						String[] fromTo = delayAndRange.split(DELIM_MINUS);
+						delay = Double.parseDouble(fromTo[0]);
+						if(fromTo.length==2) {
+							delayRngRange = Double.parseDouble(fromTo[1]) - delay;
+						}
+						parameterMap.remove("delay");
+					}
+					if (parameterMap.containsKey("explode")) {
+						explode = !parameterMap.get("explode").equals("0");
+						parameterMap.remove("explode");
+					}
+					for (String monsterName: parameterMap.keySet()) {
+						EntityType entityType = EntityType.valueOf(monsterName.toUpperCase());
+						String[] hpLifeTime = parameterMap.get(monsterName).split(DELIM_KOMMA);
+						double hp = Double.parseDouble(hpLifeTime[0]);
+						double lifeTime = -1;
+						if (hpLifeTime.length==2) {
+							lifeTime = Double.parseDouble(hpLifeTime[1]);
+						}
+						AA_MonsterTrigger mt = new AA_MonsterTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, entityType);
+						mt.setDelay(delay);
+						mt.setDelayRndRange(delayRngRange);
+						mt.setHp(hp);
+						mt.setLifeTime(lifeTime);
+						mt.setExplodeOnDeath(explode);
+						miniGame.addMonsterTrigger(mt);
+					}
+				}
+			} catch (Exception e) {
+				failAndBreak(creator, "Wrong format.");
+				AA_MessageSystem.example("  [" + (command.equals("@distance")?"@distance:5":"@start") + "]", creator);
+				AA_MessageSystem.example(" delay:3-7   " + ChatColor.DARK_GRAY + "(optional)", creator);
+				AA_MessageSystem.example(" zombie:100,10   (or setScore:75)", creator);
+				AA_MessageSystem.example(" explode:1", creator);
+				AA_MessageSystem.sideNote("where 100=hp and 10=lifeTime", creator);
+				AA_MessageSystem.sideNote("Entity IDs here: " + ENTITY_IDS_HELP, creator);
+				e.printStackTrace();
+				return false;
+			}
 		}
 
 
@@ -378,11 +425,14 @@ public class AA_SignCommand {
 
 
 
-	private boolean isSurroundingMiniGameRequired() {
+	public boolean isSurroundingMiniGameRequired() {
 		return !command.equals("border") && !command.equals("highScore");
 	}
-	private boolean isOpOnlyCommand() {
+	public boolean isOpOnlyCommand() {
 		return command.equals("start") || command.equals("edit") || command.equals("border");
+	}
+	public boolean isClickCommand() {
+		return command.equals("start") || command.equals("edit") || command.equals("exit");
 	}
 
 	private boolean validateStringParamater(final Player executor, final String param, final String... possibleValues) {
@@ -474,7 +524,7 @@ public class AA_SignCommand {
 			for (int i = 0; i<lines.length; i++) {
 				String line = ChatColor.stripColor(lines[i]);
 				if (command != null) {
-					String[] keyVal = line.split("(:)|(: )|( : )|(=)|(= )|( = )", 2);
+					String[] keyVal = line.split(DELIM_ASSIGN, 2);
 					if (keyVal.length == 2) {
 						parameterMap.put(resolveAbbreviations(keyVal[0]), resolveAbbreviations(keyVal[1]));
 					} else {
@@ -489,6 +539,13 @@ public class AA_SignCommand {
 						optionalStylingLoopback.setLine(i, getFormatedCommand(command));
 					}
 					parameterMap = new LinkedHashMap<String, String>();
+					if (command.startsWith("@distance")) {
+						String[] cmdRad = command.split(DELIM_ASSIGN, 2);
+						if(cmdRad.length==2) {
+							command = "@distance";
+							parameterMap.put("radius", cmdRad[1]);
+						}
+					}
 				}
 			}
 			return command == null ? null : new AA_SignCommand(signBlock, attachedBlock, command, parameterMap);
@@ -499,6 +556,10 @@ public class AA_SignCommand {
 
 	public static String getFormatedCommand(final String command) {
 		return "[" + ChatColor.BLUE + command + ChatColor.RESET + "]";
+	}
+
+	public Block getAttachedBlock() {
+		return attachedBlock;
 	}
 
 	private static String resolveAbbreviations(String string) {

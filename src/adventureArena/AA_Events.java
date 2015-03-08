@@ -1,7 +1,10 @@
 package adventureArena;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -17,7 +20,11 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
@@ -29,11 +36,15 @@ import org.bukkit.event.player.PlayerExpChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerKickEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.util.BlockVector;
 
 @SuppressWarnings("deprecation")
 public class AA_Events implements Listener {
+
+	static Map<Player,BlockVector> currentPlayerBlockPos = new HashMap<Player, BlockVector>();
 
 
 	private static HashSet<Byte> transparent = new HashSet<Byte>();
@@ -42,6 +53,30 @@ public class AA_Events implements Listener {
 		transparent.add((byte) Material.LONG_GRASS.getId());
 		transparent.add((byte) Material.WALL_SIGN.getId());
 	}
+
+	@EventHandler
+	public void onPlayerMove(final PlayerMoveEvent e) {
+		BlockVector newPosRounded = e.getTo().toVector().toBlockVector();
+		if (newPosRounded.equals(currentPlayerBlockPos.get(e.getPlayer()))) return;
+		else {
+			currentPlayerBlockPos.put(e.getPlayer(), newPosRounded);
+			onBlockEnter(e.getPlayer(), newPosRounded, e.getTo().getBlock());
+		}
+	}
+
+	private void onBlockEnter(final Player player, final BlockVector newPosRounded, final Block block) {
+		// TODO Auto-generated method stub
+		//player.sendMessage("BLOCK-ENTER: " + newPosRounded.toString());
+		if (AA_MiniGameControl.isPlayingMiniGame(player)) {
+			AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(player);
+			if (mg!=null) {
+				for (AA_MonsterTrigger mt: mg.getRangedMonsterTriggers()) {
+					mt.checkRangeAndTrigger(player);
+				}
+			}
+		}
+	}
+
 
 
 	@EventHandler
@@ -55,10 +90,35 @@ public class AA_Events implements Listener {
 
 	// ############## MINIGAME GAMEPLAY ################
 
+	//	@EventHandler
+	//	public void onBlockRedstone(final BlockRedstoneEvent e) {
+	//		AA_MessageSystem.consoleWarn("BlockRedstoneEvent[" + e.getBlock().getType() + "]: " + e.getOldCurrent() + "->" + e.getNewCurrent());
+	//	}
+
 	@EventHandler
 	public void onEntityRegainHealth(final EntityRegainHealthEvent e) {
 		if (e.getEntity() instanceof Player && AA_MiniGameControl.isPlayingMiniGame((Player) e.getEntity())) {
 			e.setCancelled(true);
+		}
+	}
+
+	@EventHandler
+	public void onEntityDamageByEntity(final EntityDamageByEntityEvent e) {
+		if(e.getEntity() instanceof Player) {
+			Player p = (Player) e.getEntity();
+			if(AA_MiniGameControl.isWatchingMiniGames(p)) {
+				e.setCancelled(true);
+			}
+		}
+	}
+	@EventHandler
+	public void onEntityDamage(final EntityDamageEvent e) {
+		if(e.getEntity() instanceof Player) {
+			Player p = (Player) e.getEntity();
+			AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(p);
+			if(AA_MiniGameControl.isPlayingMiniGame(p) && mg!=null && mg.isOver()) {
+				e.setCancelled(true);
+			}
 		}
 	}
 
@@ -71,7 +131,7 @@ public class AA_Events implements Listener {
 	}
 	@EventHandler
 	public void onCreatureSpawn(final CreatureSpawnEvent e) {
-		if(AA_MiniGameControl.getMiniGameContainingLocation(e.getLocation())!=null){ //TODO improve this with isInsideMgHub()
+		if(e.getSpawnReason()==SpawnReason.NATURAL && AA_MiniGameControl.getMiniGameContainingLocation(e.getLocation())!=null){ //TODO improve this with isInsideMgHub()
 			e.setCancelled(true);
 		}
 	}
@@ -96,7 +156,7 @@ public class AA_Events implements Listener {
 	@EventHandler
 	public void onPlayerRespawn(final PlayerRespawnEvent event) {
 		if (AA_MiniGameControl.isInMiniGameHub(event.getPlayer())) {
-			AdventureArena.executeDelayed(0.1, new Runnable() {
+			AdventureArena.executeDelayed(0.2, new Runnable() {
 				@Override
 				public void run() {
 					AA_MiniGameControl.setMiniGameSpectator(event.getPlayer(), false);
@@ -124,6 +184,10 @@ public class AA_Events implements Listener {
 		}
 	}
 
+	@EventHandler
+	public void onBlockPlace(final BlockPlaceEvent event) {
+		onBlockModify(event.getBlock(), event.getPlayer(), event);
+	}
 	public void onBlockModify(final Block block, final Player player, final Cancellable c) {
 		antiCheatControl(player, block, c);
 	}
@@ -161,16 +225,36 @@ public class AA_Events implements Listener {
 	// ############## SIGN EDIT ################
 
 	@EventHandler
+	public void onEntityExplode(final EntityExplodeEvent event) {
+		List<Block> blocksToRemove = new ArrayList<Block>();
+		for (Block b: event.blockList()) {
+			AA_SignCommand signCommand = AA_SignCommand.createFrom(b);
+			if (signCommand != null && signCommand.isClickCommand()) {
+				blocksToRemove.add(b);
+				blocksToRemove.add(signCommand.getAttachedBlock());
+			}
+		}
+		event.blockList().removeAll(blocksToRemove);
+	}
+
+
+	@EventHandler
 	public void onBlockBreak(final BlockBreakEvent event) {
 		onBlockModify(event.getBlock(), event.getPlayer(), event);
+		if (event.isCancelled()) return;
+		boolean isEditMode = AA_MiniGameControl.isEditingMiniGame(event.getPlayer());
 		AA_SignCommand signCommand = AA_SignCommand.createFrom(event.getBlock());
 		if (signCommand != null) {
-			signCommand.executeOnBreak(event.getPlayer(), event);
+			signCommand.executeOnBreak(event.getPlayer(), event, isEditMode);
 		}
-	}
-	@EventHandler
-	public void onBlockPlace(final BlockPlaceEvent event) {
-		onBlockModify(event.getBlock(), event.getPlayer(), event);
+		List<Block> attachedSigns = AA_TerrainHelper.getAttachedSigns(event.getBlock());
+		for(Block b: attachedSigns) {
+			signCommand = AA_SignCommand.createFrom(b);
+			if (signCommand != null) {
+				signCommand.executeOnBreak(event.getPlayer(), event, isEditMode);
+			}
+		}
+
 	}
 	@EventHandler
 	public void onSignChange(final SignChangeEvent event) {
