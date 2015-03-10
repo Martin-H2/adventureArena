@@ -61,7 +61,7 @@ public class AA_Commands implements CommandExecutor {
 				}
 
 			}
-			if (args.length == 3 && args[0].equals("removeAllowedEditor")) {
+			else if (args.length == 3 && args[0].equals("removeAllowedEditor")) {
 				Player player = AdventureArena.getOnlinePlayerStartingWith(args[2]);
 				if (player == null) return false;
 				try {
@@ -72,6 +72,9 @@ public class AA_Commands implements CommandExecutor {
 					return false;
 				}
 
+			}
+			else if (args.length == 2 && args[0].equals("rebuildMiniGameCfg")) {
+				AA_MiniGameControl.rebuildMiniGameCfg(args[1]);
 			}
 		}
 

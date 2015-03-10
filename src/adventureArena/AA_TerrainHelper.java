@@ -23,6 +23,8 @@ public class AA_TerrainHelper {
 
 
 
+
+
 	static Location getAirBlockAboveGroundTelePos(final Location start, final boolean searchUpwards) {
 		return getAirBlockAboveGround(start.getBlock(), searchUpwards).getLocation().add(0.5, 0, 0.5);
 	}
@@ -87,6 +89,8 @@ public class AA_TerrainHelper {
 		}
 		else return false;
 	}
+
+	
 
 
 

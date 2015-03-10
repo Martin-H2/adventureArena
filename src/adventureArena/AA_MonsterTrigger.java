@@ -36,6 +36,7 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 	private static Random rnd = new Random();
 	private boolean hasGlobalCd = false;
 	private final List<Integer> runningTasks = new ArrayList<Integer>();
+	private int count = 1;
 
 
 
@@ -69,6 +70,9 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 		lifeTime = (double) serializedForm.get("lifeTime");
 		explodeOnDeath = (boolean) serializedForm.get("explodeOnDeath");
 		newScore = (int) serializedForm.get("newScore");
+		if(serializedForm.containsKey("count")) {
+			count = (int) serializedForm.get("count");
+		}
 	}
 	@Override
 	public Map<String, Object> serialize() {
@@ -84,6 +88,7 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 		serializedForm.put("lifeTime", lifeTime);
 		serializedForm.put("explodeOnDeath", explodeOnDeath);
 		serializedForm.put("newScore", newScore);
+		serializedForm.put("count", count);
 		return serializedForm;
 	}
 
@@ -204,6 +209,9 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 	}
 	public void setExplodeOnDeath(final boolean explodeOnDeath) {
 		this.explodeOnDeath = explodeOnDeath;
+	}
+	public void setCount(final int count) {
+		this.count = count;
 	}
 
 

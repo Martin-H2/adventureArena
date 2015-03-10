@@ -25,8 +25,6 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
-import org.bukkit.event.entity.EntityRegainHealthEvent;
-import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerAnimationEvent;
@@ -71,6 +69,7 @@ public class AA_Events implements Listener {
 			AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(player);
 			if (mg!=null) {
 				for (AA_MonsterTrigger mt: mg.getRangedMonsterTriggers()) {
+					//AA_MessageSystem.consoleDebug("TRIGGER: " + mt);
 					mt.checkRangeAndTrigger(player);
 				}
 			}
@@ -83,6 +82,9 @@ public class AA_Events implements Listener {
 	public void onPlayerJoin(final PlayerJoinEvent event) {
 		if(!AA_MiniGameControl.isInMiniGameHub(event.getPlayer())) {
 			event.getPlayer().setGameMode(Bukkit.getDefaultGameMode());
+			if(AA_MiniGameControl.isInMgHubAABB(event.getPlayer().getLocation())) {
+				AA_MiniGameControl.leaveMiniGameHub(event.getPlayer(), null);
+			}
 		}
 		AA_MiniGameControl.kickIfPlayingMiniGame(event.getPlayer());
 	}
@@ -95,12 +97,12 @@ public class AA_Events implements Listener {
 	//		AA_MessageSystem.consoleWarn("BlockRedstoneEvent[" + e.getBlock().getType() + "]: " + e.getOldCurrent() + "->" + e.getNewCurrent());
 	//	}
 
-	@EventHandler
-	public void onEntityRegainHealth(final EntityRegainHealthEvent e) {
-		if (e.getEntity() instanceof Player && AA_MiniGameControl.isPlayingMiniGame((Player) e.getEntity())) {
-			e.setCancelled(true);
-		}
-	}
+	//	@EventHandler
+	//	public void onEntityRegainHealth(final EntityRegainHealthEvent e) {
+	//		if (e.getEntity() instanceof Player && AA_MiniGameControl.isPlayingMiniGame((Player) e.getEntity())) {
+	//			e.setCancelled(true);
+	//		}
+	//	}
 
 	@EventHandler
 	public void onEntityDamageByEntity(final EntityDamageByEntityEvent e) {
@@ -122,17 +124,25 @@ public class AA_Events implements Listener {
 		}
 	}
 
-	@EventHandler
-	public void onItemSpawn(final ItemSpawnEvent e) {
-		if(AA_MiniGameControl.getMiniGameContainingLocation(e.getLocation())!=null){
-			//FIXME test
-			//e.setCancelled(true);
-		}
-	}
+	//	@EventHandler
+	//	public void onItemSpawn(final ItemSpawnEvent e) {
+	//		if(AA_MiniGameControl.getMiniGameContainingLocation(e.getLocation())!=null){
+	//			//FIXME test
+	//			//e.setCancelled(true);
+	//		}
+	//	}
+
 	@EventHandler
 	public void onCreatureSpawn(final CreatureSpawnEvent e) {
-		if(e.getSpawnReason()==SpawnReason.NATURAL && AA_MiniGameControl.getMiniGameContainingLocation(e.getLocation())!=null){ //TODO improve this with isInsideMgHub()
-			e.setCancelled(true);
+		//		if(e.getSpawnReason()==SpawnReason.NATURAL && AA_MiniGameControl.getMiniGameContainingLocation(e.getLocation())!=null){ //TODO improve this with isInsideMgHub()
+		//			e.setCancelled(true);
+		//		}
+
+		if(AA_MiniGameControl.isInMgHubAABB(e.getLocation())) {
+			//AA_MessageSystem.consoleDebug("CreatureSpawnEvent: " + e.getSpawnReason() + ", " + e.getEntityType());
+			if (e.getSpawnReason()==SpawnReason.NATURAL) {
+				e.setCancelled(true);
+			}
 		}
 	}
 	@EventHandler
@@ -183,6 +193,14 @@ public class AA_Events implements Listener {
 			e.setAmount(0);
 		}
 	}
+
+	//	@EventHandler
+	//	public void onPlayerTeleport(final PlayerTeleportEvent e) {
+	//		if ((e.getCause()==TeleportCause.END_PORTAL || e.getCause()==TeleportCause.NETHER_PORTAL )
+	//				&& (AA_MiniGameControl.getMiniGameContainingLocation(e.getFrom())!=null || AA_MiniGameControl.getMiniGameContainingLocation(e.getTo())!=null)) {
+	//			e.setCancelled(true);
+	//		}
+	//	}
 
 	@EventHandler
 	public void onBlockPlace(final BlockPlaceEvent event) {
@@ -260,7 +278,7 @@ public class AA_Events implements Listener {
 	public void onSignChange(final SignChangeEvent event) {
 		final AA_SignCommand signCommand = AA_SignCommand.createFrom(event.getBlock(), event.getLines() , event);
 		if (signCommand != null) {
-			signCommand.executeOnCreation(event.getPlayer());
+			signCommand.executeOnCreation(event.getPlayer(), event.getPlayer().getWorld());
 		}
 	}
 

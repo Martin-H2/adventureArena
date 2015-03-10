@@ -56,7 +56,7 @@ public class AA_TeamManager {
 		// COLLECT PLAYERS NEARBY
 		final ArrayList<Player> playersAroundSign = new ArrayList<Player>();
 		for (Player p: Bukkit.getOnlinePlayers()) {
-			if (origin.distance(p.getLocation())<=radius && AA_MiniGameControl.isWatchingMiniGames(p)) {
+			if (AA_MiniGameControl.isWatchingMiniGames(p) && origin.distance(p.getLocation())<=radius) {
 				playersAroundSign.add(p);
 			}
 		}

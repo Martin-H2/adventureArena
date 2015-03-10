@@ -141,13 +141,19 @@ public class AA_MiniGame {
 
 	//################## SETTER GETTER ######################
 
-	public void setSouthEastMax(final Location southEastMax) {
-		this.southEastMax = southEastMax!=null ? southEastMax.toVector() : null;
+	public void setSouthEastMax(final Vector southEastMax) {
+		this.southEastMax = southEastMax;
 		needsPersisting = true;
 	}
-	public void setNorthWestMin(final Location northWestMin) {
-		this.northWestMin = northWestMin!=null ? northWestMin.toVector() : null;
+	public void setNorthWestMin(final Vector northWestMin) {
+		this.northWestMin = northWestMin;
 		needsPersisting = true;
+	}
+	public Vector getNorthWestMin() {
+		return northWestMin;
+	}
+	public Vector getSouthEastMax() {
+		return southEastMax;
 	}
 
 	public String getName() {

@@ -11,5 +11,5 @@ commands:
    serverinfo:
       usage: /serverinfo
    mg:
-      usage: /mg [info|resetScore|addAllowedEditor <miniGameID> <name>|removeAllowedEditor <miniGameID> <name>]
+      usage: /mg [info|resetScore|addAllowedEditor <miniGameID> <name>|removeAllowedEditor <miniGameID> <name>|rebuildMiniGameCfg <worldName>]
       

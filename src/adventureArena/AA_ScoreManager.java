@@ -66,7 +66,7 @@ public class AA_ScoreManager {
 							color = ChatColor.GREEN;
 							String oldKing = mg.getKing();
 							if (!playerName.equals(oldKing)) {
-								AA_MessageSystem.broadcast(ChatColor.GOLD + "[" + mg.getName() + "] NEW HIGHSCORE LEADER: " + score + " by " + ChatColor.RED + playerName);
+								AA_MessageSystem.broadcast(ChatColor.GOLD + "[" + mg.getName() + "] NEW HIGHSCORE LEADER: " + ChatColor.RED + playerName + " with " + score);
 								mg.setKing(playerName);
 							}
 						}
@@ -179,7 +179,7 @@ public class AA_ScoreManager {
 		AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(p);
 		if (mg!=null && AA_MiniGameControl.isPlayingMiniGame(p)) {
 			double oldScore = getScore(mg, ScoreType.CMD_RATING, p, 0.0);
-			if (oldScore!=newScore) {
+			if (newScore>oldScore) {
 				if (mg.getScoreMode()==ScoreMode.ScoreByCommand) {
 					AA_MessageSystem.success("Your " + mg.getName() + " score is now: " + ChatColor.GOLD + Math.round(newScore), p);
 				}

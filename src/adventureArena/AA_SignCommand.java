@@ -10,6 +10,7 @@ import java.util.UUID;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.enchantments.Enchantment;
@@ -17,6 +18,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.util.Vector;
 
 public class AA_SignCommand {
 
@@ -197,67 +199,81 @@ public class AA_SignCommand {
 	}
 
 
-	public boolean executeOnCreation(final Player creator) {
+	public boolean executeOnCreation(final Player optionalCreator, final World world) {
 		if (!commands.contains(command)) {
-			failAndBreak(creator, "Unknown command: " + highlightColor() + command + errorColor() + ", possible is: " + ultraHighlightColor() + commands.toString());
+			failAndBreak(optionalCreator, "Unknown command: " + highlightColor() + command + errorColor() + ", possible is: " + ultraHighlightColor() + commands.toString());
 			return false;
 		}
 
 		AA_MiniGame miniGame = AA_MiniGameControl.getMiniGameContainingLocation(signBlock.getLocation());
 
-		if (!creator.isOp() && isOpOnlyCommand()) {
-			failAndBreak(creator, "Only Op can set " + highlightColor() + command);
+		if (optionalCreator!=null && !optionalCreator.isOp() && isOpOnlyCommand()) {
+			failAndBreak(optionalCreator, "Only Op can set " + highlightColor() + command);
 			return false;
 		}
 
 		if (miniGame==null && isSurroundingMiniGameRequired()) {
-			failAndBreak(creator, "Command-sign is not inside miniGame borders");
+			failAndBreak(optionalCreator, "Command-sign is not inside miniGame borders" + (optionalCreator==null?" @"+signBlock.getLocation().toVector():""));
 			return false;
 		}
 
-		if (miniGame!=null && !miniGame.isEditableByPlayer(creator)) {
-			failAndBreak(creator, "You are not allowed to modify this miniGame");
+		if (optionalCreator!=null && miniGame!=null && !miniGame.isEditableByPlayer(optionalCreator)) {
+			failAndBreak(optionalCreator, "You are not allowed to modify this miniGame");
+			return false;
+		}
+
+		if (miniGame!=null && command.equals("border")) {
+			failAndBreak(optionalCreator, "MG overlap or 3rd border definition");
 			return false;
 		}
 
 
 
-		if (command.equals("border") && validateStringParamater(creator, "corner", "nwl", "seu") & validateIntParamater(creator, "id", 0, Integer.MAX_VALUE)) {
+		if (command.equals("border") && validateStringParamater(optionalCreator, "corner", "nwl", "seu") & validateIntParamater(optionalCreator, "id", 0, Integer.MAX_VALUE)) {
 			int id = Integer.parseInt(parameterMap.get("id"));
 			if (miniGame==null) {
 				miniGame = AA_MiniGameControl.getMiniGame(id);
 			}
 			if (miniGame==null) {
-				miniGame = new AA_MiniGame(id, creator.getWorld());
+				miniGame = new AA_MiniGame(id, world);
 				AA_MiniGameControl.addMiniGame(miniGame);
 			}
+			Vector signBlockVectorLoc = signBlock.getLocation().toVector();
 			if (parameterMap.get("corner").equals("nwl")) {
-				miniGame.setNorthWestMin(signBlock.getLocation());
+				if(miniGame.getNorthWestMin()!=null) {
+					failAndBreak(optionalCreator, "nwl border already exists.");
+				} else {
+					miniGame.setNorthWestMin(signBlockVectorLoc);
+				}
 			}
 			if (parameterMap.get("corner").equals("seu")) {
-				miniGame.setSouthEastMax(signBlock.getLocation());
+				if(miniGame.getSouthEastMax()!=null) {
+					failAndBreak(optionalCreator, "seu border already exists.");
+				} else {
+					miniGame.setSouthEastMax(signBlockVectorLoc);
+				}
 			}
 		}
 		else if (command.equals("highScore")) {
 			if (miniGame==null) {
-				if (validateIntParamater(creator, "id", 0, Integer.MAX_VALUE)) {
+				if (validateIntParamater(optionalCreator, "id", 0, Integer.MAX_VALUE)) {
 					int id = Integer.parseInt(parameterMap.get("id"));
 					miniGame = AA_MiniGameControl.getMiniGame(id);
 					if (miniGame==null) {
-						failAndBreak(creator, "No miniGame found with id: " + id);
+						failAndBreak(optionalCreator, "No miniGame found with id: " + id);
 						return false;
 					}
 				} else {
-					failAndBreak(creator, "You need an id, placing this outside a miniGame");
+					failAndBreak(optionalCreator, "You need an id, placing this outside a miniGame");
 					return false;
 				}
 			}
 			miniGame.registerHighScoreSignLocation(signBlock.getLocation());
 			miniGame.persist();
 		}
-		else if (command.equals("settings") && validateStringParamater(creator, "name")
-				& validateIntParamater(creator, "pvpDamage", 0, 1)
-				& validateStringParamater(creator, "scoreMode", "kd", "lms", "cmd") ) {
+		else if (command.equals("settings") && validateStringParamater(optionalCreator, "name")
+				& validateIntParamater(optionalCreator, "pvpDamage", 0, 1)
+				& validateStringParamater(optionalCreator, "scoreMode", "kd", "lms", "cmd") ) {
 			miniGame.setName(parameterMap.get("name"));
 			miniGame.setPvpDamage(!parameterMap.get("pvpDamage").equals("0"));
 			if (parameterMap.get("scoreMode").equals("kd")) {
@@ -270,7 +286,7 @@ public class AA_SignCommand {
 		}
 		else if (command.equals("spawnEquip")) {
 			if (parameterMap.size()==0) {
-				failAndBreak(creator, "No item specified");
+				failAndBreak(optionalCreator, "No item specified");
 			}
 
 			int lineIndex = 0;
@@ -286,12 +302,12 @@ public class AA_SignCommand {
 					String itemName = entry.getKey();
 					try {
 						itemMaterial = Material.valueOf(itemName.toUpperCase());
-						if (validateIntParamater(creator, itemName, 1, 64)) {
+						if (validateIntParamater(optionalCreator, itemName, 1, 64)) {
 							amount = Integer.parseInt(entry.getValue());
 						}
 					} catch (IllegalArgumentException e) {
-						failAndBreak(creator, "1st line needs to be an " + ultraHighlightColor() + "ItemId:amount" + errorColor() + "pair");
-						failAndBreak(creator, "Unknown item ID: " + highlightColor() + itemName + errorColor() + ", see all IDs here: " +MATERIAL_IDS_HELP);
+						failAndBreak(optionalCreator, "1st line needs to be an " + ultraHighlightColor() + "ItemId:amount" + errorColor() + "pair");
+						failAndBreak(optionalCreator, "Unknown item ID: " + highlightColor() + itemName + errorColor() + ", see all IDs here: " +MATERIAL_IDS_HELP);
 					}
 				}
 				if (entry.getKey().equals("for")) {
@@ -299,23 +315,23 @@ public class AA_SignCommand {
 					try {
 						targetMaterial = Material.valueOf(itemName.toUpperCase());
 					} catch (IllegalArgumentException e) {
-						failAndBreak(creator, "Unknown item ID: " + highlightColor() + itemName + errorColor() + ", see all IDs here: " +MATERIAL_IDS_HELP);
+						failAndBreak(optionalCreator, "Unknown item ID: " + highlightColor() + itemName + errorColor() + ", see all IDs here: " +MATERIAL_IDS_HELP);
 					}
 				}
 				if (entry.getKey().equals("ench")) {
 					String[] enchVal = entry.getValue().split(" ");
 					if (enchVal.length!=2) {
-						failAndBreak(creator, "Enchant line must be: " + ultraHighlightColor() + "ench:EnchId lvl" + errorColor() + ", see all IDs here: " +ENCHANT_IDS_HELP);
+						failAndBreak(optionalCreator, "Enchant line must be: " + ultraHighlightColor() + "ench:EnchId lvl" + errorColor() + ", see all IDs here: " +ENCHANT_IDS_HELP);
 					} else {
 						String enchName = enchVal[0];
 						ench = Enchantment.getByName(enchName.toUpperCase());
 						if (ench==null) {
-							failAndBreak(creator, "Unknown enchant ID: " + highlightColor() + enchName + errorColor() + ", see all IDs here: " +ENCHANT_IDS_HELP);
+							failAndBreak(optionalCreator, "Unknown enchant ID: " + highlightColor() + enchName + errorColor() + ", see all IDs here: " +ENCHANT_IDS_HELP);
 						}
 						try {
 							enchLevel = Integer.parseInt(enchVal[1]);
 						} catch (NumberFormatException e1) {
-							failAndBreak(creator, "Enchant lvl must be a number: " + ultraHighlightColor() + "ench:EnchId lvl");
+							failAndBreak(optionalCreator, "Enchant lvl must be a number: " + ultraHighlightColor() + "ench:EnchId lvl");
 						}
 					}
 				}
@@ -323,12 +339,14 @@ public class AA_SignCommand {
 			}
 
 			if (failed) {
-				AA_MessageSystem.example("  [spawnEquip]", creator);
-				AA_MessageSystem.example(" dia_pickaxe:1", creator);
-				AA_MessageSystem.example(" for:redstone_b", creator);
-				AA_MessageSystem.example(" ench:dig_speed 5", creator);
-				AA_MessageSystem.sideNote("(dia_ is short for diamond_)", creator);
-				AA_MessageSystem.sideNote("(_b is short for _block)", creator);
+				if(optionalCreator!=null) {
+					AA_MessageSystem.example("  [spawnEquip]", optionalCreator);
+					AA_MessageSystem.example(" dia_pickaxe:1", optionalCreator);
+					AA_MessageSystem.example(" for:redstone_b", optionalCreator);
+					AA_MessageSystem.example(" ench:dig_speed 5", optionalCreator);
+					AA_MessageSystem.sideNote("(dia_ is short for diamond_)", optionalCreator);
+					AA_MessageSystem.sideNote("(_b is short for _block)", optionalCreator);
+				}
 				return false;
 			} else {
 				miniGame.addSpawnEquipDefinition(new AA_SpawnEquip(signBlock.getLocation().toVector(), itemMaterial, targetMaterial, amount, ench, enchLevel));
@@ -349,7 +367,7 @@ public class AA_SignCommand {
 		}
 		else if (command.equals("@distance") || command.equals("@start")) {
 			if (command.equals("@distance") && !parameterMap.containsKey("radius")) {
-				failAndBreak(creator, "Missing radius. Example: " + ultraHighlightColor() + "[@distance:5]");
+				failAndBreak(optionalCreator, "Missing radius. Example: " + ultraHighlightColor() + "[@distance:5]");
 				return false;
 			}
 			try {
@@ -361,12 +379,13 @@ public class AA_SignCommand {
 				double delay = -1;
 				double delayRngRange = 0;
 				boolean explode = false;
+				int count = 1;
 				int newScore = -1;
 				if (parameterMap.containsKey("setScore")) {
-					if (miniGame.getScoreMode()!=ScoreMode.ScoreByCommand) {
-						creator.sendMessage(ChatColor.RED + "[WARNING] score set by sign is only displayed on highScore lists when scoreMode:cmd under [settings]");
+					if (optionalCreator!=null && miniGame.getScoreMode()!=ScoreMode.ScoreByCommand) {
+						optionalCreator.sendMessage(ChatColor.RED + "[WARNING] score set by sign is only displayed on highScore lists when scoreMode:cmd under [settings]");
 					}
-					if (!validateIntParamater(creator, "setScore", 0, 999)) return false;
+					if (!validateIntParamater(optionalCreator, "setScore", 0, 999)) return false;
 					newScore = Integer.parseInt(parameterMap.get("setScore"));
 					AA_MonsterTrigger mt = new AA_MonsterTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, newScore);
 					miniGame.addMonsterTrigger(mt);
@@ -384,6 +403,10 @@ public class AA_SignCommand {
 						explode = !parameterMap.get("explode").equals("0");
 						parameterMap.remove("explode");
 					}
+					if (parameterMap.containsKey("count")) {
+						count = Integer.parseInt(parameterMap.get("count"));
+						parameterMap.remove("count");
+					}
 					for (String monsterName: parameterMap.keySet()) {
 						EntityType entityType = EntityType.valueOf(monsterName.toUpperCase());
 						String[] hpLifeTime = parameterMap.get(monsterName).split(DELIM_KOMMA);
@@ -396,19 +419,22 @@ public class AA_SignCommand {
 						mt.setDelay(delay);
 						mt.setDelayRndRange(delayRngRange);
 						mt.setHp(hp);
+						mt.setCount(count);
 						mt.setLifeTime(lifeTime);
 						mt.setExplodeOnDeath(explode);
 						miniGame.addMonsterTrigger(mt);
 					}
 				}
 			} catch (Exception e) {
-				failAndBreak(creator, "Wrong format.");
-				AA_MessageSystem.example("  [" + (command.equals("@distance")?"@distance:5":"@start") + "]", creator);
-				AA_MessageSystem.example(" delay:3-7   " + ChatColor.DARK_GRAY + "(optional)", creator);
-				AA_MessageSystem.example(" zombie:100,10   (or setScore:75)", creator);
-				AA_MessageSystem.example(" explode:1", creator);
-				AA_MessageSystem.sideNote("where 100=hp and 10=lifeTime", creator);
-				AA_MessageSystem.sideNote("Entity IDs here: " + ENTITY_IDS_HELP, creator);
+				failAndBreak(optionalCreator, "Wrong format.");
+				if(optionalCreator!=null) {
+					AA_MessageSystem.example("  [" + (command.equals("@distance")?"@distance:5":"@start") + "]", optionalCreator);
+					AA_MessageSystem.example(" delay:3-7   " + ChatColor.DARK_GRAY + "(optional)", optionalCreator);
+					AA_MessageSystem.example(" zombie:100,10   (or setScore:75)", optionalCreator);
+					AA_MessageSystem.example(" explode:1", optionalCreator);
+					AA_MessageSystem.sideNote("where 100=hp and 10=lifeTime", optionalCreator);
+					AA_MessageSystem.sideNote("Entity IDs here: " + ENTITY_IDS_HELP, optionalCreator);
+				}
 				e.printStackTrace();
 				return false;
 			}
@@ -417,7 +443,11 @@ public class AA_SignCommand {
 
 		if (miniGame!=null && miniGame.needsPersisting()) {
 			miniGame.persist();
-			AA_MessageSystem.success("Added " + command + " to config for miniGame #" + miniGame.getID(), creator);
+			if(optionalCreator!=null) {
+				AA_MessageSystem.success("Added " + command + " to config for miniGame #" + miniGame.getID(), optionalCreator);
+			} else {
+				AA_MessageSystem.consoleDebug("Added " + command + " to config for miniGame #" + miniGame.getID() + " @" + signBlock.getLocation().toVector());
+			}
 			return true;
 		}
 		return false;
@@ -477,8 +507,12 @@ public class AA_SignCommand {
 
 	private void failAndBreak(final Player executor, final String message) {
 		failed = true;
-		AA_MessageSystem.error(message, executor);
-		signBlock.breakNaturally();
+		if (executor!=null) {
+			AA_MessageSystem.error(message, executor);
+			signBlock.breakNaturally();
+		} else {
+			AA_MessageSystem.consoleError(message);
+		}
 	}
 	private void failAndCancel(final Player executor, final String message, final Cancellable c) {
 		failed = true;
@@ -521,29 +555,34 @@ public class AA_SignCommand {
 			String command = null;
 			LinkedHashMap<String, String> parameterMap = null;
 
-			for (int i = 0; i<lines.length; i++) {
-				String line = ChatColor.stripColor(lines[i]);
-				if (command != null) {
-					String[] keyVal = line.split(DELIM_ASSIGN, 2);
-					if (keyVal.length == 2) {
-						parameterMap.put(resolveAbbreviations(keyVal[0]), resolveAbbreviations(keyVal[1]));
-					} else {
-						if (line.length()>0 && optionalStylingLoopback != null) {
-							AA_MessageSystem.error("Invalid parameter line (" +line+ "), format is" + ultraHighlightColor() + " key:value" , optionalStylingLoopback.getPlayer());
+			if(lines[0].startsWith(ChatColor.RED + "==")) {
+				command = "highScore";
+				parameterMap = new LinkedHashMap<String, String>();
+			} else {
+				for (int i = 0; i<lines.length; i++) {
+					String line = ChatColor.stripColor(lines[i]);
+					if (command != null) {
+						String[] keyVal = line.split(DELIM_ASSIGN, 2);
+						if (keyVal.length == 2) {
+							parameterMap.put(resolveAbbreviations(keyVal[0]), resolveAbbreviations(keyVal[1]));
+						} else {
+							if (line.length()>0 && optionalStylingLoopback != null) {
+								AA_MessageSystem.error("Invalid parameter line (" +line+ "), format is" + ultraHighlightColor() + " key:value" , optionalStylingLoopback.getPlayer());
+							}
 						}
 					}
-				}
-				if (line.startsWith("[") && line.endsWith("]")) {
-					command = line.substring(1, line.length()-1);
-					if (optionalStylingLoopback != null) {
-						optionalStylingLoopback.setLine(i, getFormatedCommand(command));
-					}
-					parameterMap = new LinkedHashMap<String, String>();
-					if (command.startsWith("@distance")) {
-						String[] cmdRad = command.split(DELIM_ASSIGN, 2);
-						if(cmdRad.length==2) {
-							command = "@distance";
-							parameterMap.put("radius", cmdRad[1]);
+					if (line.startsWith("[") && line.endsWith("]")) {
+						command = line.substring(1, line.length()-1);
+						if (optionalStylingLoopback != null) {
+							optionalStylingLoopback.setLine(i, getFormatedCommand(command));
+						}
+						parameterMap = new LinkedHashMap<String, String>();
+						if (command.startsWith("@distance")) {
+							String[] cmdRad = command.split(DELIM_ASSIGN, 2);
+							if(cmdRad.length==2) {
+								command = "@distance";
+								parameterMap.put("radius", cmdRad[1]);
+							}
 						}
 					}
 				}
@@ -560,6 +599,10 @@ public class AA_SignCommand {
 
 	public Block getAttachedBlock() {
 		return attachedBlock;
+	}
+
+	public String getCommand() {
+		return command;
 	}
 
 	private static String resolveAbbreviations(String string) {

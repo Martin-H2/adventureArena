@@ -24,6 +24,9 @@ import org.bukkit.util.Vector;
 
 public class AA_MiniGameControl {
 
+	static final Vector MINIGAME_HUB_MIN = new Vector(149, 14, -251);
+	static final Vector MINIGAME_HUB_MAX = new Vector(251, 44, -149);
+
 
 	private static final String MINIGAME_CONFIGNAME = "miniGames.yml";
 	private static File configFile = null;
@@ -97,6 +100,60 @@ public class AA_MiniGameControl {
 
 
 	// ################ MINIGAME MANAGEMENT ##################
+
+	public static boolean isInMgHubAABB(final Location location) {
+		return location.toVector().isInAABB(MINIGAME_HUB_MIN, MINIGAME_HUB_MAX);
+	}
+
+	public static void rebuildMiniGameCfg(final String worldName) {
+		// TODO rebuildMiniGameCfg
+		final World world = Bukkit.getWorld(worldName);
+		if(world==null) {
+			AA_MessageSystem.consoleError("world not found: " + worldName);
+			return;
+		}
+		Block block;
+		int numBlocks = 0;
+		final List<AA_SignCommand> foundSignCommands = new ArrayList<AA_SignCommand>();
+		AA_MessageSystem.consoleDebug("searching SignCommands...");
+		for(int x=MINIGAME_HUB_MIN.getBlockX(); x<=MINIGAME_HUB_MAX.getBlockX(); x++) {
+			for(int y=MINIGAME_HUB_MIN.getBlockY(); y<=MINIGAME_HUB_MAX.getBlockY(); y++) {
+				for(int z=MINIGAME_HUB_MIN.getBlockZ(); z<=MINIGAME_HUB_MAX.getBlockZ(); z++) {
+					numBlocks++;
+					block = world.getBlockAt(x, y, z);
+					AA_SignCommand signCommand = AA_SignCommand.createFrom(block);
+					if (signCommand != null) {
+						foundSignCommands.add(signCommand);
+					}
+				}
+			}
+		}
+		AA_MessageSystem.consoleDebug("done. found " + foundSignCommands.size() + " cmds in " + numBlocks + " blocks.");
+		AdventureArena.executeDelayed(5, new Runnable() {
+			@Override
+			public void run() {
+				AA_MessageSystem.consoleDebug("loading borders...");
+				for (AA_SignCommand cmd: foundSignCommands) {
+					if (cmd.getCommand().equals("border")) {
+						cmd.executeOnCreation(null, world);
+					}
+				}
+				AA_MessageSystem.consoleDebug("done...");
+				AdventureArena.executeDelayed(5, new Runnable() {
+					@Override
+					public void run() {
+						AA_MessageSystem.consoleDebug("loading other commands...");
+						for (AA_SignCommand cmd: foundSignCommands) {
+							if (!cmd.getCommand().equals("border")) {
+								cmd.executeOnCreation(null, world);
+							}
+						}
+						AA_MessageSystem.consoleDebug("done...");
+					}
+				});
+			}
+		});
+	}
 
 	public static void loadMiniGamesFromConfig() {
 		for (String path: getMiniGameConfig().getRoot().getKeys(false)) {
@@ -427,6 +484,8 @@ public class AA_MiniGameControl {
 			}
 		}
 	}
+
+
 
 
 
