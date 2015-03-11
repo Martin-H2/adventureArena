@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -46,8 +47,10 @@ public class AA_MiniGame {
 
 	//play session. TODO persist or ensure consistency
 	//private final HashMap<String, List<Player>> teamPlayerMappings = new HashMap<String, List<Player>>();
+	private static Random rnd = new Random();
 	private final HashMap<String, Integer> initialJoiners = new HashMap<String, Integer>();
 	private boolean isOver = false;
+	List<Player> activePlayers = new ArrayList<Player>();
 
 
 
@@ -450,6 +453,7 @@ public class AA_MiniGame {
 
 
 	void addPlayer(final String teamName, final Player p) {
+		activePlayers.add(p);
 		Team t = AA_TeamManager.getTeam(id + ":" + teamName, this);
 		if (t.hasPlayer(p)) return;
 		t.addPlayer(p);
@@ -461,6 +465,7 @@ public class AA_MiniGame {
 	}
 
 	void removePlayer(final Player p) {
+		activePlayers.remove(p);
 		Team t = AA_TeamManager.getTeam(p);
 		if (t==null) return;
 		t.removePlayer(p);
@@ -471,6 +476,7 @@ public class AA_MiniGame {
 
 	public void wipePlaySession() {
 		initialJoiners.clear();
+		activePlayers.clear();
 		isOver = false;
 		for (Team t: getTeams()) {
 			AA_MessageSystem.consoleWarn("cleaning up team: " + t.getName());
@@ -487,11 +493,12 @@ public class AA_MiniGame {
 
 
 	public int getNumberOfPlayersRemaining() {
-		int totalPlayers = 0;
-		for (Team t: getTeams()) {
-			totalPlayers += t.getSize();
-		}
-		return totalPlayers;
+		//		int totalPlayers = 0;
+		//		for (Team t: getTeams()) {
+		//			totalPlayers += t.getSize();
+		//		}
+		//		return totalPlayers;
+		return activePlayers.size();
 	}
 
 	//	public int numberOfPlayersLeft(final Team t) {
@@ -559,6 +566,10 @@ public class AA_MiniGame {
 
 	public void setOver() {
 		isOver = true;
+	}
+
+	public Player getRandomPlayer() {
+		return activePlayers.size()==0 ? null : activePlayers.get(rnd.nextInt(activePlayers.size()));
 	}
 
 

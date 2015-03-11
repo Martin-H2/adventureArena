@@ -376,7 +376,7 @@ public class AA_SignCommand {
 					radius = Double.parseDouble(parameterMap.get("radius"));
 					parameterMap.remove("radius");
 				}
-				double delay = -1;
+				double delay = 0;
 				double delayRngRange = 0;
 				boolean explode = false;
 				int count = 1;

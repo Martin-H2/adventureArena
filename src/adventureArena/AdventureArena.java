@@ -44,6 +44,10 @@ public class AdventureArena extends JavaPlugin {
 		return instance.getServer().getScheduler().scheduleSyncDelayedTask(instance, runnable, (long) (delaySec*20));
 	}
 
+	//	public static void executePeriodically(final int delaySec, final int count, final Runnable runnable) {
+	//		instance.getServer().getScheduler().scheduleSyncRepeatingTask(instance, runnable, delaySec*20, delaySec*20);
+	//	}
+
 	public static void executePeriodically(final int delaySec, final Runnable runnable) {
 		instance.getServer().getScheduler().scheduleSyncRepeatingTask(instance, runnable, delaySec*20, delaySec*20);
 	}

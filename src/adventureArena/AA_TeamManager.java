@@ -72,6 +72,7 @@ public class AA_TeamManager {
 				if (teamChallengeActive(miniGame)) {
 					AA_MessageSystem.errorForGroup("Team-challenge pending, use team entrance.", playersAroundSign);
 				} else {
+					miniGame.wipeEntities();
 					AA_TeamManager.startMiniGameForTeam(miniGame, teamName, playersAroundSign);
 				}
 				return;
@@ -129,7 +130,7 @@ public class AA_TeamManager {
 		}
 
 		for (AA_MonsterTrigger mt: miniGame.getStartMonsterTriggers()) {
-			mt.checkAndTrigger(miniGame.getWorld());
+			mt.checkAndTrigger(miniGame.getWorld(), miniGame);
 		}
 
 	}

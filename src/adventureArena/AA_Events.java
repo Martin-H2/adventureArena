@@ -70,7 +70,7 @@ public class AA_Events implements Listener {
 			if (mg!=null) {
 				for (AA_MonsterTrigger mt: mg.getRangedMonsterTriggers()) {
 					//AA_MessageSystem.consoleDebug("TRIGGER: " + mt);
-					mt.checkRangeAndTrigger(player);
+					mt.checkRangeAndTrigger(player, mg);
 				}
 			}
 		}
@@ -141,7 +141,10 @@ public class AA_Events implements Listener {
 		if(AA_MiniGameControl.isInMgHubAABB(e.getLocation())) {
 			//AA_MessageSystem.consoleDebug("CreatureSpawnEvent: " + e.getSpawnReason() + ", " + e.getEntityType());
 			if (e.getSpawnReason()==SpawnReason.NATURAL) {
-				e.setCancelled(true);
+				AA_MiniGame mg = AA_MiniGameControl.getMiniGameContainingLocation(e.getLocation());
+				if(mg!=null && (mg.isInProgress() || mg.isLockedByEditSession())) {
+					e.setCancelled(true);
+				}
 			}
 		}
 	}
@@ -222,7 +225,7 @@ public class AA_Events implements Listener {
 		antiCheatControl(event.getPlayer(), null, event);
 	}
 
-	private void antiCheatControl(final Player player, final Block block, final Cancellable c) {
+	private void antiCheatControl(final Player player, final Block block, final Cancellable c) { //FIXME NPE @ granting creative !
 		if (player!=null && player.getGameMode()==GameMode.CREATIVE && !player.isOp()) {
 			if (block!=null && AA_TerrainHelper.isUndestroyableArenaBorder(block)) {
 				c.setCancelled(true);

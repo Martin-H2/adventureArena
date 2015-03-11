@@ -9,6 +9,7 @@ import java.util.Random;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
+import org.bukkit.entity.Creature;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
@@ -26,7 +27,7 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 	//#### OPTIONAL ####
 	private EntityType entityType = EntityType.UNKNOWN;
 	private int newScore = -1;
-	private double delay = -1;
+	private double delay = 0;
 	private double delayRndRange = 0;
 	private double hp = -1;
 	private double lifeTime = -1;
@@ -98,20 +99,20 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 
 
 	//#### API ####
-	public void checkRangeAndTrigger(final Player p) {
+	public void checkRangeAndTrigger(final Player p, final AA_MiniGame mg) {
 		if (isInside(p.getLocation().toVector())) {
 			if (newScore>=0) {
 				triggerScore(p);
 			}
 			else if (!hasGlobalCd) {
-				triggerSpawn(p.getWorld());
+				triggerSpawn(p.getWorld(), mg);
 			}
 
 		}
 	}
-	public void checkAndTrigger(final World w) {
+	public void checkAndTrigger(final World w, final AA_MiniGame mg) {
 		if (!hasGlobalCd) {
-			triggerSpawn(w);
+			triggerSpawn(w, mg);
 		}
 	}
 	public void reset() {
@@ -133,17 +134,19 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 			AA_ScoreManager.onSetScoreCmd(p, newScore);
 		}
 	}
-	private void triggerSpawn(final World w) {
+	private void triggerSpawn(final World w, final AA_MiniGame mg) {
 		hasGlobalCd = true;
-		Runnable spawnProcess = new Runnable() {
+		final Location airBlockAboveAttachedBlockTelePos = AA_TerrainHelper.getAirBlockAboveGroundTelePos(attachedBlockPosition.toLocation(w), true);
+
+		AA_SelfCancelingTask spawnTask = new AA_SelfCancelingTask() {
 			@Override
-			public void run() {
-				Location airBlockAboveAttachedBlockTelePos = AA_TerrainHelper.getAirBlockAboveGroundTelePos(attachedBlockPosition.toLocation(w), true);
+			public void tick() {
 				final Entity entity = w.spawnEntity(airBlockAboveAttachedBlockTelePos, entityType);
-				if (entity instanceof LivingEntity && hp>0) {
-					LivingEntity monster = (LivingEntity) entity;
-					monster.setMaxHealth(hp);
-					monster.setHealth(hp);
+				if (entity instanceof Creature && hp>0) {
+					Creature creature = (Creature) entity;
+					creature.setMaxHealth(hp);
+					creature.setHealth(hp);
+					creature.setTarget(mg.getRandomPlayer());
 				}
 				if (lifeTime>0) {
 					runningTasks.add(AdventureArena.executeDelayed(lifeTime, new Runnable() {
@@ -165,13 +168,17 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 				}
 			}
 		};
-		if (delay>0) {
-			double rndDelay = delay + rnd.nextDouble()*delayRndRange;
-			runningTasks.add(AdventureArena.executeDelayed(rndDelay, spawnProcess));
+
+
+		if (delay==0 && count==1) {
+			spawnTask.tick();
 		} else {
-			spawnProcess.run();
+			spawnTask.schedule(delay + rnd.nextDouble()*delayRndRange, 1, count);
+			runningTasks.add(spawnTask.getTaskId());
 		}
 	}
+
+
 	private boolean isInside(final Vector v) {
 		return attachedBlockPosition.distanceSquared(v) <= radius*radius;
 	}
@@ -187,7 +194,7 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 		return hasGlobalCd;
 	}
 	public void setDelay(final double delay) {
-		this.delay = delay;
+		this.delay = Math.max(0, delay);
 	}
 	public void setDelayRndRange(final double delayRndRange) {
 		this.delayRndRange = Math.abs(delayRndRange);
