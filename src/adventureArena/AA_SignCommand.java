@@ -117,10 +117,8 @@ public class AA_SignCommand {
 
 
 	public boolean executeOnBreak(final Player breaker, final Cancellable c, final boolean isEditmode) {
-		if (!isEditmode) {
-			if (isClickCommand()) {
-				c.setCancelled(true);
-			}
+		if (!isEditmode && isClickCommand()) {
+			c.setCancelled(true);
 			return false;
 		}
 		if (!commands.contains(command))
@@ -145,7 +143,7 @@ public class AA_SignCommand {
 
 
 
-		if (command.equals("border") && validateStringParamater(breaker, "corner", "nwl", "seu") && validateIntParamater(breaker, "id", 0, Integer.MAX_VALUE)) {
+		if (command.equals("border")) {
 			int id = Integer.parseInt(parameterMap.get("id"));
 			if (miniGame==null) {
 				miniGame = AA_MiniGame.loadFromConfig(id);
@@ -165,7 +163,7 @@ public class AA_SignCommand {
 			miniGame.removeSpawnEquipBySignPos(signBlock.getLocation().toVector());
 			AA_MessageSystem.success("(" + miniGame.getSpawnEquipDefinitions().size() + "x SpawnEquip left)", breaker);
 		}
-		else if (command.equals("@distance")) {
+		else if (command.equals("@distance") || command.equals("@start")) {
 			miniGame.removeMonsterTriggerBySignPos(signBlock.getLocation().toVector());
 		}
 		else if (command.equals("spawn")) {
@@ -609,6 +607,9 @@ public class AA_SignCommand {
 		if (string.startsWith("dia_")) {
 			//string.replace("dia_", "diamond_");
 			string = "diamond_" + string.substring(4);
+		}
+		else if (string.startsWith("pris_")) {
+			string = "prismarine_" + string.substring(5);
 		}
 		if (string.endsWith("_b")) {
 			//string.replace("_b", "_block");

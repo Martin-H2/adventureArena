@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.entity.Creature;
@@ -14,6 +16,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 
@@ -147,11 +151,22 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 					creature.setMaxHealth(hp);
 					creature.setHealth(hp);
 					creature.setTarget(mg.getRandomPlayer());
+					if (explodeOnDeath) {
+						EntityEquipment ee = creature.getEquipment();
+						ee.setHelmet(new ItemStack(Material.PUMPKIN));
+					}
 				}
 				if (lifeTime>0) {
-					runningTasks.add(AdventureArena.executeDelayed(lifeTime, new Runnable() {
+					entity.setCustomNameVisible(true);
+					AA_SelfCancelingTask explosionTimerTask = new AA_SelfCancelingTask() {
 						@Override
-						public void run() {
+						public void tick() {
+							ChatColor cc = getNumberOfExecutionsLeft()<3 ? ChatColor.RED : ChatColor.BLUE;
+							entity.setCustomName(cc.toString() + getNumberOfExecutionsLeft());
+							AA_MessageSystem.consoleDebug("EXPLODE: " + cc.toString() + getNumberOfExecutionsLeft());
+						}
+						@Override
+						public void lastTick() {
 							if(entity.isValid()) {
 								if (explodeOnDeath) {
 									float power = 4;
@@ -159,13 +174,21 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 										LivingEntity monster = (LivingEntity) entity;
 										power *= (float) (monster.getHealth() / monster.getMaxHealth());
 									}
+									entity.setCustomName("Exploding " + entity.getName());
 									entity.getWorld().createExplosion(entity.getLocation(), power);
 								}
 								entity.remove();
 							}
 						}
-					}));
+					};
+
+					explosionTimerTask.schedule(0, 1, (int) Math.round(lifeTime)+1);
+					runningTasks.add(explosionTimerTask.getTaskId());
 				}
+			}
+			@Override
+			public void lastTick() {
+				tick();
 			}
 		};
 

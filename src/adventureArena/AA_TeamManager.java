@@ -43,8 +43,8 @@ public class AA_TeamManager {
 
 	private static Team registerTeam(final String idAndTeamName, final AA_MiniGame mg) {
 		Team team = scoreBoard.registerNewTeam(idAndTeamName);
-		team.setAllowFriendlyFire(idAndTeamName.endsWith(FFA_TEAM) && mg.isPvpDamage());
-		team.setCanSeeFriendlyInvisibles(true);
+		team.setAllowFriendlyFire(true);
+		team.setCanSeeFriendlyInvisibles(false);
 		return team;
 	}
 
@@ -188,6 +188,17 @@ public class AA_TeamManager {
 			lockedPlayers.remove(p);
 		}
 		teamChallenges.remove(miniGame);
+	}
+
+	public static boolean isSameTeam(final Player p1, final Player p2) {
+		Team t1 = getTeam(p1);
+		if (t1==null) return false;
+		return t1.equals(getTeam(p2));
+	}
+
+	public static boolean isFFaTeam(final Player attackedPlayer) {
+		Team t = getTeam(attackedPlayer);
+		return t!=null && t.getName().endsWith(FFA_TEAM);
 	}
 
 

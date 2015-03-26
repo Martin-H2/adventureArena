@@ -35,10 +35,23 @@ public class AA_Commands implements CommandExecutor {
 				AA_MiniGameControl.surroundingMiniGameInfo(player);
 				return true;
 			}
-			if(args[0].equals("resetScore") && AA_MiniGameControl.isPlayerInsideHisEditableArea(player)) {
-				AA_ScoreManager.surroundingMiniGameScoreReset(player);
-				return true;
+			if (AA_MiniGameControl.isPlayerInsideHisEditableArea(player)) {
+				if(args[0].equals("resetScore")) {
+					AA_ScoreManager.surroundingMiniGameScoreReset(player);
+					return true;
+				}
+				else if(args[0].equals("wipeSession")) {
+					AA_MiniGameControl.surroundingMiniGameSessionWipe(player);
+					return true;
+				}
+				else if(args[0].equals("aas")) {
+					AA_MiniGameControl.surroundingMiniGameAllowAllSpectators(player);
+					return true;
+				}
+			} else {
+				AA_MessageSystem.error("You need edit access for this command.", sender);
 			}
+
 		}
 
 		// ############### OPERATOR ONLY #################
@@ -62,11 +75,9 @@ public class AA_Commands implements CommandExecutor {
 
 			}
 			else if (args.length == 3 && args[0].equals("removeAllowedEditor")) {
-				Player player = AdventureArena.getOnlinePlayerStartingWith(args[2]);
-				if (player == null) return false;
 				try {
 					int id = Integer.parseInt(args[1]);
-					AA_MiniGameControl.removeAllowedEditor(id, player, sender);
+					AA_MiniGameControl.removeAllowedEditor(id, args[2], sender);
 					return true;
 				} catch (NumberFormatException e) {
 					return false;

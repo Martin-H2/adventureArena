@@ -14,6 +14,7 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -29,6 +30,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerAnimationEvent;
 import org.bukkit.event.player.PlayerAnimationType;
+import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerExpChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -107,9 +109,15 @@ public class AA_Events implements Listener {
 	@EventHandler
 	public void onEntityDamageByEntity(final EntityDamageByEntityEvent e) {
 		if(e.getEntity() instanceof Player) {
-			Player p = (Player) e.getEntity();
-			if(AA_MiniGameControl.isWatchingMiniGames(p)) {
+			Player attackedPlayer = (Player) e.getEntity();
+			if(AA_MiniGameControl.isWatchingMiniGames(attackedPlayer)) {
 				e.setCancelled(true);
+			} else if (AA_MiniGameControl.isPlayingMiniGame(attackedPlayer) && e.getDamager() instanceof Player) {
+				Player attackingPlayer = (Player) e.getDamager();
+				AA_MiniGame mg = AA_MiniGameControl.getMiniGameContainingLocation(attackedPlayer.getLocation());
+				if (!mg.isPvpDamage() || AA_TeamManager.isSameTeam(attackedPlayer, attackingPlayer) && !AA_TeamManager.isFFaTeam(attackedPlayer)) {
+					e.setDamage(0);
+				}
 			}
 		}
 	}
@@ -172,7 +180,7 @@ public class AA_Events implements Listener {
 			AdventureArena.executeDelayed(0.2, new Runnable() {
 				@Override
 				public void run() {
-					AA_MiniGameControl.setMiniGameSpectator(event.getPlayer(), false);
+					AA_MiniGameControl.setMiniGameSpectator(event.getPlayer(), false, event.getPlayer().getBedSpawnLocation());
 				}
 			});
 		}
@@ -189,6 +197,13 @@ public class AA_Events implements Listener {
 
 
 	// ############## NO CHEATING WITH CREATIVE ################
+
+	@EventHandler(priority=EventPriority.HIGHEST)
+	public void onPlayerBedEnter(final PlayerBedEnterEvent e) {
+		if (AA_MiniGameControl.isInMiniGameHub(e.getPlayer())) {
+			e.setCancelled(true);
+		}
+	}
 
 	@EventHandler
 	public void onPlayerExpChange(final PlayerExpChangeEvent e) {
@@ -253,6 +268,8 @@ public class AA_Events implements Listener {
 			if (signCommand != null && signCommand.isClickCommand()) {
 				blocksToRemove.add(b);
 				blocksToRemove.add(signCommand.getAttachedBlock());
+			} else if (AA_TerrainHelper.isUndestroyableArenaBorder(b)) {
+				blocksToRemove.add(b);
 			}
 		}
 		event.blockList().removeAll(blocksToRemove);

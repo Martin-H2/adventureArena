@@ -15,6 +15,7 @@ import org.bukkit.potion.PotionEffect;
 public class AA_InventorySaver {
 
 	private static final boolean KEEP_MINIGAME_LEVEL_AS_REWARD = true;
+	private static final double MINIGAME_LEVEL_REWARD_FACT = 0.1;
 	private static final String CONFIG_NAME = "savedPlayerInventories.yml";
 	private static File configFile = null;
 	private static YamlConfiguration config = null;
@@ -74,7 +75,7 @@ public class AA_InventorySaver {
 			PlayerInventory inventory = player.getInventory();
 
 			player.setHealth(config.getDouble(playerDataRootPath + "." + AA_ConfigPaths.health, player.getMaxHealth()));
-			int arenaLevel = player.getLevel();
+			int arenaLevel = (int) Math.round(player.getLevel()*MINIGAME_LEVEL_REWARD_FACT);
 			player.setLevel((KEEP_MINIGAME_LEVEL_AS_REWARD ? arenaLevel : 0) + config.getInt(playerDataRootPath + "." + AA_ConfigPaths.level));
 			player.setExp((float) config.getDouble(playerDataRootPath + "." + AA_ConfigPaths.xp));
 			player.setFoodLevel(config.getInt(playerDataRootPath + "." + AA_ConfigPaths.foodLevel, 20));
@@ -113,7 +114,7 @@ public class AA_InventorySaver {
 			config.set(playerDataRootPath, null);
 			saveConfig();
 			if (library.equals(AA_ConfigPaths.savedPlayerData)) {
-				AA_MessageSystem.success("Inventory, xp & buffs restored..." + (KEEP_MINIGAME_LEVEL_AS_REWARD && arenaLevel>0 ? " (+" + arenaLevel + " bonus level)" : ""), player);
+				AA_MessageSystem.success("Inventory, xp & buffs restored..." + (KEEP_MINIGAME_LEVEL_AS_REWARD && arenaLevel>0 ? " (+" + arenaLevel + " level reward)" : ""), player);
 			}
 			return true;
 		} else {

@@ -24,8 +24,10 @@ import org.bukkit.util.Vector;
 
 public class AA_MiniGameControl {
 
-	static final Vector MINIGAME_HUB_MIN = new Vector(149, 14, -251);
-	static final Vector MINIGAME_HUB_MAX = new Vector(251, 44, -149);
+	//	static final Vector MINIGAME_HUB_MIN = new Vector(149, 14, -251);
+	//	static final Vector MINIGAME_HUB_MAX = new Vector(251, 44, -149);
+	static final Vector MINIGAME_HUB_MIN = new Vector(97, 9, -253);
+	static final Vector MINIGAME_HUB_MAX = new Vector(303, 47, -153);
 
 
 	private static final String MINIGAME_CONFIGNAME = "miniGames.yml";
@@ -34,6 +36,8 @@ public class AA_MiniGameControl {
 
 	public static final GameMode MINIGAME_HUB_GAMEMODE = GameMode.ADVENTURE;
 	private static final PotionEffect PERMANENT_NIGHTVISION = new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 0, true, false);
+	private static final PotionEffect PERMANENT_SPEED = new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 3, true, false);
+	private static final PotionEffect PERMANENT_SATURATION = new PotionEffect(PotionEffectType.SATURATION, Integer.MAX_VALUE, 3, true, false);
 	private static List<AA_MiniGame> miniGames = new ArrayList<AA_MiniGame>();
 
 	public static List<AA_MiniGame> getMiniGames() {
@@ -42,6 +46,8 @@ public class AA_MiniGameControl {
 
 
 
+	//TODO expo helm
+	//TODO port upwards
 
 	// ################ MINIGAME HUB ##################
 
@@ -55,17 +61,23 @@ public class AA_MiniGameControl {
 			player.setExp(0);
 			config.set(AA_ConfigPaths.isInMiniGameHub + "." + player.getName(), true);
 			savePluginConfig();
-			setMiniGameSpectator(player, false);
+			setMiniGameSpectator(player, false, target);
+			player.setBedSpawnLocation(target, true);
 		}
 	}
-	public static void setMiniGameSpectator(final Player player, final boolean onDeath) {
+	public static void setMiniGameSpectator(final Player player, final boolean onDeath, Location optionalBackportLocation) {
 		setPlayerState(player, PlayerState.IS_WATCHING, null);
 		player.setGameMode(MINIGAME_HUB_GAMEMODE);
-		Location target = getMiniGameHubSpawn(player.getWorld());
-		player.setBedSpawnLocation(target, true);
+		if (optionalBackportLocation==null) {
+			optionalBackportLocation = getMiniGameHubSpawn(player.getWorld());
+		}
 		if (!onDeath) {
 			setNeutralPlayerState(player);
-			teleportSafe(player, target);
+			teleportSafe(player, optionalBackportLocation);
+			//spectator buffs
+			player.addPotionEffect(PERMANENT_SPEED, true);
+			player.addPotionEffect(PERMANENT_SATURATION, true);
+			//player.addPotionEffect(PERMANENT_NIGHTVISION, true);
 		}
 	}
 	public static void leaveMiniGameHub(final Player player, Location target) {
@@ -176,10 +188,19 @@ public class AA_MiniGameControl {
 		}
 	}
 	public static void kickIfPlayingMiniGame(final Player p) {
-		if (isPlayingMiniGame(p)) {
+		if (isPlayingMiniGame(p) || isEditingMiniGame(p)) {
 			AA_MiniGame mg = getMiniGameForPlayer(p);
 			AA_MessageSystem.consoleWarn("player "+ p.getName() + " still in miniGame '" + mg.getName() + "', kicking...");
 			leaveCurrentMiniGame(p, false);
+		}
+	}
+	public static void kickIfPlayingMiniGame(final AA_MiniGame mg, final Player p) {
+		if (isPlayingMiniGame(p) || isEditingMiniGame(p)) {
+			AA_MiniGame mgPlayer = getMiniGameForPlayer(p);
+			if (mg.equals(mgPlayer)) {
+				AA_MessageSystem.consoleWarn("player "+ p.getName() + " was kicked from '" + mgPlayer.getName());
+				leaveCurrentMiniGame(p, false);
+			}
 		}
 	}
 	public static void addMiniGame(final AA_MiniGame miniGame) {
@@ -214,6 +235,7 @@ public class AA_MiniGameControl {
 
 		if (isPlayerInsideHisEditableArea(player)) {
 			Block target = AA_TerrainHelper.getAirBlockAboveGround(player.getLocation().getBlock().getRelative(BlockFace.DOWN, 3), false);
+			player.setBedSpawnLocation(miniGame.getSpectatorRespawnPoint(), true);
 			teleportSafe(player, target);
 			player.setGameMode(GameMode.CREATIVE);
 			AA_InventorySaver.restoreInventoryAndPlayerMeta(player, AA_ConfigPaths.savedCreativeData);
@@ -243,26 +265,26 @@ public class AA_MiniGameControl {
 			AA_MessageSystem.success("gave " + player.getName() + " editing power for miniGame #" + id, sender);
 		}
 	}
-	public static void removeAllowedEditor(final int id, final Player player, final CommandSender sender) {
+	public static void removeAllowedEditor(final int id, final String playerName, final CommandSender sender) {
 		AA_MiniGame mg = getMiniGame(id);
 		if (mg==null) {
 			AA_MessageSystem.error("miniGameId not found: " + id, sender);
 		} else {
-			mg.removeAllowedEditor(player.getName());
+			mg.removeAllowedEditor(playerName);
 			mg.persist();
-			AA_MessageSystem.success("took " + player.getName() + "'s editing power for miniGame #" + id, sender);
+			AA_MessageSystem.success("took " + playerName + "'s editing power for miniGame #" + id, sender);
 		}
 	}
 	public static boolean isPlayerInsideHisEditableArea(final Player player) {
 		AA_MiniGame mg = getMiniGameContainingLocation(player.getLocation());
 		return mg==null ? false : mg.isEditableByPlayer(player);
 	}
-	public static void surroundingMiniGameInfo(final Player player) {
-		AA_MiniGame mg = getMiniGameContainingLocation(player.getLocation());
+	public static void surroundingMiniGameInfo(final Player commandExecutor) {
+		AA_MiniGame mg = getMiniGameContainingLocation(commandExecutor.getLocation());
 		if (mg!=null) {
-			AA_MessageSystem.sideNote("Inside minigame: " + mg.toString(), player);
+			AA_MessageSystem.sideNote("Inside minigame: " + mg.toString(), commandExecutor);
 		} else {
-			AA_MessageSystem.error("You are not inside a miniGame area", player);
+			AA_MessageSystem.error("You are not inside a miniGame area", commandExecutor);
 		}
 	}
 
@@ -302,10 +324,13 @@ public class AA_MiniGameControl {
 		AA_MessageSystem.success("Starting " + miniGame.getName() + " for you...", p);
 		setNeutralPlayerState(p);
 		p.setGameMode(MINIGAME_HUB_GAMEMODE);
+		p.setBedSpawnLocation(miniGame.getSpectatorRespawnPoint(), true);
 		teleportSafe(p, AA_TerrainHelper.getAirBlockAboveGround(vector.toLocation(p.getWorld()), true));
 		setPlayerState(p, PlayerState.IS_PLAYING,miniGame);
 		miniGame.addPlayer(teamName, p);
-		p.getInventory().addItem(miniGame.getSpawnEquip());
+		for(ItemStack item: miniGame.getSpawnEquip()) {
+			AA_ItemHelper.addItemSmart(p, item);
+		}
 		p.updateInventory();
 	}
 
@@ -355,7 +380,7 @@ public class AA_MiniGameControl {
 			}
 			AA_ScoreManager.updateHighScoreList(mg);
 		}
-		setMiniGameSpectator(player, onDeath);
+		setMiniGameSpectator(player, onDeath, mg.getSpectatorRespawnPoint());
 	}
 
 	private static void win(final AA_MiniGame mg) {
@@ -366,7 +391,7 @@ public class AA_MiniGameControl {
 					AA_MessageSystem.success("You won " + mg.getName(), p);
 					AA_ScoreManager.onPlayerWin(mg, p);
 					mg.removePlayer(p);
-					setMiniGameSpectator(p, false);
+					setMiniGameSpectator(p, false, mg.getSpectatorRespawnPoint());
 				} else {
 					//TODO dead spect
 				}
@@ -439,7 +464,8 @@ public class AA_MiniGameControl {
 		player.updateInventory();
 	}
 
-	public static void teleportSafe(final Player player, final Location target) {
+	public static void teleportSafe(final Player player, Location target) {
+		target = target.clone();
 		target.add(0.5, 0.0, 0.5);
 		player.teleport(target);
 	}
@@ -482,6 +508,40 @@ public class AA_MiniGameControl {
 				AA_MessageSystem.consoleError(MINIGAME_CONFIGNAME + "cannot be overwritten or created");
 				e.printStackTrace();
 			}
+		}
+	}
+
+
+
+	public static void surroundingMiniGameSessionWipe(final Player commandExecutor) {
+		final AA_MiniGame mg = getMiniGameContainingLocation(commandExecutor.getLocation());
+		if (mg!=null) {
+			for (Player p: Bukkit.getOnlinePlayers()) {
+				kickIfPlayingMiniGame(mg, p);
+			}
+			for (Player p: mg.getPlayersRemaining()) {
+				kickIfPlayingMiniGame(p);
+			}
+			if(mg.isInProgress() || mg.isLockedByEditSession()) {
+				mg.setLockedByEditSession(false);
+				mg.setInProgress(false);
+				mg.wipeEntities();
+				mg.wipePlaySession();
+			}
+			AA_MessageSystem.success("Wiped session!", commandExecutor);
+		}
+	}
+
+
+
+	public static void surroundingMiniGameAllowAllSpectators(final Player commandExecutor) {
+		final AA_MiniGame mg = getMiniGameContainingLocation(commandExecutor.getLocation());
+		if (mg!=null) {
+			for (Player p: mg.getSpectators()) {
+				mg.addAllowedEditor(p.getName());
+				AA_MessageSystem.success("gave " + p.getName() + " editing power for " + mg.getName(), commandExecutor);
+			}
+			mg.persist();
 		}
 	}
 

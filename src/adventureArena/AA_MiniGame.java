@@ -51,6 +51,7 @@ public class AA_MiniGame {
 	private final HashMap<String, Integer> initialJoiners = new HashMap<String, Integer>();
 	private boolean isOver = false;
 	List<Player> activePlayers = new ArrayList<Player>();
+	private Location spectatorRespawnPoint = null;
 
 
 
@@ -69,8 +70,8 @@ public class AA_MiniGame {
 		set(AA_ConfigPaths.lockedByEditSession, lockedByEditSession);
 		set(AA_ConfigPaths.inProgress, inProgress);
 		set(AA_ConfigPaths.worldName, world.getName());
-		set(AA_ConfigPaths.southEastMax, southEastMax);
-		set(AA_ConfigPaths.northWestMin, northWestMin);
+		set(AA_ConfigPaths.southEastMax, getSouthEastMax());
+		set(AA_ConfigPaths.northWestMin, getNorthWestMin());
 		set(AA_ConfigPaths.name, name);
 		set(AA_ConfigPaths.king, king);
 		set(AA_ConfigPaths.pvpDamage, pvpDamage);
@@ -100,8 +101,8 @@ public class AA_MiniGame {
 		mg.needsEnvironmentBackup = cfg.getBoolean(miniGameRootPath + "." + AA_ConfigPaths.needsEnvironmentBackup, true);
 		mg.lockedByEditSession = cfg.getBoolean(miniGameRootPath + "." + AA_ConfigPaths.lockedByEditSession, false);
 		mg.inProgress = cfg.getBoolean(miniGameRootPath + "." + AA_ConfigPaths.inProgress, false);
-		mg.southEastMax = cfg.getVector(miniGameRootPath + "." + AA_ConfigPaths.southEastMax , null);
-		mg.northWestMin = cfg.getVector(miniGameRootPath + "." + AA_ConfigPaths.northWestMin , null);
+		mg.setSouthEastMax(cfg.getVector(miniGameRootPath + "." + AA_ConfigPaths.southEastMax , null));
+		mg.setNorthWestMin(cfg.getVector(miniGameRootPath + "." + AA_ConfigPaths.northWestMin , null));
 		mg.name = cfg.getString(miniGameRootPath + "." + AA_ConfigPaths.name , "newMiniGame");
 		mg.king = cfg.getString(miniGameRootPath + "." + AA_ConfigPaths.king , null);
 		mg.pvpDamage = cfg.getBoolean(miniGameRootPath + "." + AA_ConfigPaths.pvpDamage , false);
@@ -146,11 +147,28 @@ public class AA_MiniGame {
 
 	public void setSouthEastMax(final Vector southEastMax) {
 		this.southEastMax = southEastMax;
+		calcSpectatorRespawnPoint();
 		needsPersisting = true;
 	}
 	public void setNorthWestMin(final Vector northWestMin) {
 		this.northWestMin = northWestMin;
+		calcSpectatorRespawnPoint();
 		needsPersisting = true;
+	}
+	private void calcSpectatorRespawnPoint() {
+		if(getSouthEastMax()!=null && getNorthWestMin()!=null) {
+			spectatorRespawnPoint = new Location(world,
+					(getSouthEastMax().getX()+getNorthWestMin().getX())/2,
+					getSouthEastMax().getY()-1,
+					(getSouthEastMax().getZ()+getNorthWestMin().getZ())/2
+					);
+		}
+	}
+	public Location getSpectatorRespawnPoint() {
+		if(spectatorRespawnPoint==null) {
+			calcSpectatorRespawnPoint();
+		}
+		return spectatorRespawnPoint;
 	}
 	public Vector getNorthWestMin() {
 		return northWestMin;
@@ -367,7 +385,7 @@ public class AA_MiniGame {
 	//################## Environment ######################
 
 	public boolean doEnvironmentBackup() {
-		if (AA_TerrainHelper.saveMiniGameToSchematic(northWestMin, southEastMax, id, world)) {
+		if (AA_TerrainHelper.saveMiniGameToSchematic(getNorthWestMin(), getSouthEastMax(), id, world)) {
 			needsEnvironmentBackup = false;
 			persist();
 			return true;
@@ -398,10 +416,10 @@ public class AA_MiniGame {
 	//################## UTIL ######################
 
 	boolean isInsideBounds(final Location loc) {
-		if(southEastMax==null || northWestMin==null) return false;
-		return southEastMax.getX()+1 >= loc.getX() && northWestMin.getX() <= loc.getX()
-				&& southEastMax.getY()+1 >= loc.getY() && northWestMin.getY() <= loc.getY()
-				&& southEastMax.getZ()+1 >= loc.getZ() && northWestMin.getZ() <= loc.getZ();
+		if(getSouthEastMax()==null || getNorthWestMin()==null) return false;
+		return getSouthEastMax().getX()+1 >= loc.getX() && getNorthWestMin().getX() <= loc.getX()
+				&& getSouthEastMax().getY()+1 >= loc.getY() && getNorthWestMin().getY() <= loc.getY()
+				&& getSouthEastMax().getZ()+1 >= loc.getZ() && getNorthWestMin().getZ() <= loc.getZ();
 	}
 
 	public int getNumberOfSpawnPoints() {
@@ -414,12 +432,15 @@ public class AA_MiniGame {
 
 	@Override
 	public String toString() {
-		return "[id=" + id + ", southEastMax=" + southEastMax
-				+ ", northWestMin=" + northWestMin + ", name=" + name
+		return "[id=" + id + ", southEastMax=" + getSouthEastMax()
+				+ ", northWestMin=" + getNorthWestMin() + ", name=" + name
+				+ ", spectatorRespawnPoint=" + getSpectatorRespawnPoint().toVector()
 				+ ", pvpDamage=" + pvpDamage + ", scoreMode=" + scoreMode
 				+ ", #spawnPoints:" + getNumberOfSpawnPoints() + ", #spawnEquip:" + spawnEquipDefinitions.size()
 				+ ", allowedEditors=" + allowedEditors.toString()
 				+ ", #highScoreSignLocations: " + highScoreSignLocations.size()
+				+ ", #startTriggers: " + startMonsterTriggers.size()
+				+ ", #distanceTriggers: " + rangedMonsterTriggers.size()
 				+ ", needsEnvironmentBackup: " + needsEnvironmentBackup
 				+ ", inProgress: " + inProgress
 				+ ", lockedByEditSession: " + lockedByEditSession
@@ -501,6 +522,10 @@ public class AA_MiniGame {
 		return activePlayers.size();
 	}
 
+	public List<Player> getPlayersRemaining() {
+		return activePlayers;
+	}
+
 	//	public int numberOfPlayersLeft(final Team t) {
 	//		if (t==null) return 0;
 	//		return t.getSize();
@@ -570,6 +595,18 @@ public class AA_MiniGame {
 
 	public Player getRandomPlayer() {
 		return activePlayers.size()==0 ? null : activePlayers.get(rnd.nextInt(activePlayers.size()));
+	}
+
+	public List<Player> getSpectators() {
+		List<Player> spectators = new ArrayList<Player>();
+		for (Player p: Bukkit.getOnlinePlayers()) {
+			if (AA_MiniGameControl.isWatchingMiniGames(p)){
+				if(equals(AA_MiniGameControl.getMiniGameForPlayer(p))) {
+					spectators.add(p);
+				}
+			}
+		}
+		return spectators;
 	}
 
 

@@ -17,15 +17,22 @@ public abstract class AA_SelfCancelingTask extends BukkitRunnable {
 
 	@Override
 	public void run() {
-		if (numberOfExecutionsLeft > 0) {
-			tick();
+		if (numberOfExecutionsLeft > 1) {
 			numberOfExecutionsLeft--;
+			tick();
+		} else if (numberOfExecutionsLeft == 1) {
+			numberOfExecutionsLeft--;
+			lastTick();
 		} else {
 			cancel();
 		}
 	}
 
 	public abstract void tick();
+	public abstract void lastTick();
 
+	public int getNumberOfExecutionsLeft() {
+		return numberOfExecutionsLeft;
+	}
 
 }

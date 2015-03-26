@@ -73,7 +73,7 @@ public class AA_ScoreManager {
 						else if (globalLineIndex==2) {
 							color = ChatColor.DARK_GREEN;
 						}
-						signState.setLine(globalLineIndex % 4, ChatColor.GRAY.toString() + globalLineIndex + "." + color.toString() + playerName + ": " + score);
+						signState.setLine(globalLineIndex % 4, ChatColor.GRAY.toString() + globalLineIndex + "." + color.toString() + playerName.substring(0,10) + ": " + score);
 					} else {
 						signState.setLine(globalLineIndex % 4, " ");
 					}
@@ -136,6 +136,9 @@ public class AA_ScoreManager {
 		AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(killer);
 		if (mg==null) return;
 		addScore(mg, ScoreType.KILLS_PVE, killer, entity.getMaxHealth()/killer.getMaxHealth());
+		double pveKills = getScore(mg, ScoreType.KILLS_PVE, killer);
+		double deaths = getScore(mg, ScoreType.DEATHS, killer);
+		setScore(mg, ScoreType.PVE_RATING, killer, pveKills/(deaths+1));
 	}
 
 	public static void onPlayerDeath(final Player dyingPlayer) {
@@ -151,9 +154,16 @@ public class AA_ScoreManager {
 			double killerRating = getScore(mg, ScoreType.PVP_RATING, killer, DEFAULT_RATING);
 			double stolenRating = ( (victimRating-killerRating)/DEFAULT_RATING + 1.0) * AVERAGE_SCORESTEAL;
 			stolenRating = Math.max(0.0, Math.min(AVERAGE_SCORESTEAL*2.0, stolenRating));
-			setScore(mg, ScoreType.PVP_RATING, dyingPlayer, victimRating - stolenRating);
-			setScore(mg, ScoreType.PVP_RATING, killer, killerRating + stolenRating);
+			double newKillerRating = killerRating + stolenRating;
+			double newVictimRating = victimRating - stolenRating;
+			killer.sendMessage(ChatColor.GOLD + "[Rating] " + ChatColor.GREEN + "You:"+killerRating+"->"+newKillerRating+"  " + ChatColor.RED + dyingPlayer.getName()+":"+victimRating+"->"+newVictimRating);
+			dyingPlayer.sendMessage(ChatColor.GOLD + "[Rating] " + ChatColor.RED + "You:"+victimRating+"->"+newVictimRating+"  " + ChatColor.GREEN + dyingPlayer.getName()+":"+killerRating+"->"+newKillerRating);
+			setScore(mg, ScoreType.PVP_RATING, killer, newKillerRating);
+			setScore(mg, ScoreType.PVP_RATING, dyingPlayer, newVictimRating);
 		}
+		double pveKills = getScore(mg, ScoreType.KILLS_PVE, dyingPlayer);
+		double deaths = getScore(mg, ScoreType.DEATHS, dyingPlayer);
+		setScore(mg, ScoreType.PVE_RATING, dyingPlayer, pveKills/(deaths+1));
 	}
 
 	public static void onPlayerLeft(final AA_MiniGame mg, final Player player) {
