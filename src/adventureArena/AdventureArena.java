@@ -4,13 +4,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 
 public class AdventureArena extends JavaPlugin {
 
-	private static AdventureArena instance;
-	public static WorldEditPlugin wep;
+	private static AdventureArena	instance;
+	public static WorldEditPlugin	wep;
 
 	@Override
 	public void onEnable() {
@@ -18,7 +17,8 @@ public class AdventureArena extends JavaPlugin {
 		wep = (WorldEditPlugin) getServer().getPluginManager().getPlugin("WorldEdit");
 		if (wep == null) {
 			AA_MessageSystem.consoleError("can't find WorldEdit");
-		} else {
+		}
+		else {
 			//AA_MessageSystem.consoleInfo("found WorldEdit");
 		}
 
@@ -41,7 +41,7 @@ public class AdventureArena extends JavaPlugin {
 	}
 
 	public static int executeDelayed(final double delaySec, final Runnable runnable) {
-		return instance.getServer().getScheduler().scheduleSyncDelayedTask(instance, runnable, (long) (delaySec*20));
+		return instance.getServer().getScheduler().scheduleSyncDelayedTask(instance, runnable, (long) (delaySec * 20));
 	}
 
 	//	public static void executePeriodically(final int delaySec, final int count, final Runnable runnable) {
@@ -49,7 +49,7 @@ public class AdventureArena extends JavaPlugin {
 	//	}
 
 	public static void executePeriodically(final int delaySec, final Runnable runnable) {
-		instance.getServer().getScheduler().scheduleSyncRepeatingTask(instance, runnable, delaySec*20, delaySec*20);
+		instance.getServer().getScheduler().scheduleSyncRepeatingTask(instance, runnable, delaySec * 20, delaySec * 20);
 	}
 
 
@@ -59,19 +59,14 @@ public class AdventureArena extends JavaPlugin {
 
 
 	public static Player getOnlinePlayerStartingWith(final String playerNameStart) {
-		@SuppressWarnings("deprecation")
 		Player fullNamePlayer = Bukkit.getPlayer(playerNameStart);
-		if (fullNamePlayer!=null) return fullNamePlayer;
+		if (fullNamePlayer != null) return fullNamePlayer;
 		for (Player p: Bukkit.getOnlinePlayers()) {
 			if (p.getName().startsWith(playerNameStart))
 				return p;
 		}
 		return null;
 	}
-
-
-
-
 
 
 

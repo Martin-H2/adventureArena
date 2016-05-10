@@ -1,10 +1,6 @@
 package adventureArena;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 public class Util {
@@ -17,18 +13,20 @@ public class Util {
 	}
 
 	private static class ByValueAsc<K, V extends Comparable<V>> implements Comparator<Entry<K, V>> {
+
+		@Override
 		public int compare(final Entry<K, V> o1, final Entry<K, V> o2) {
 			return o1.getValue().compareTo(o2.getValue());
 		}
 	}
+
 	private static class ByValueDesc<K, V extends Comparable<V>> implements Comparator<Entry<K, V>> {
+
+		@Override
 		public int compare(final Entry<K, V> o1, final Entry<K, V> o2) {
 			return -o1.getValue().compareTo(o2.getValue());
 		}
 	}
-
-
-
 
 
 

@@ -1,21 +1,12 @@
 package adventureArena;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
+import java.util.*;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
-import org.bukkit.entity.Creature;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
@@ -23,26 +14,26 @@ import org.bukkit.util.Vector;
 
 public class AA_MonsterTrigger implements ConfigurationSerializable {
 
-	private final Vector signPosition;
-	private final Vector attachedBlockPosition;
-	private final boolean isSpawnTrigger;
-	private final double radius;
+	private final Vector		signPosition;
+	private final Vector		attachedBlockPosition;
+	private final boolean		isSpawnTrigger;
+	private final double		radius;
 
 	//#### OPTIONAL ####
-	private EntityType entityType = EntityType.UNKNOWN;
-	private int newScore = -1;
-	private double delay = 0;
-	private double delayRndRange = 0;
-	private double hp = -1;
-	private double lifeTime = -1;
-	private boolean explodeOnDeath = false;
+	private EntityType			entityType			= EntityType.UNKNOWN;
+	private int					newScore			= -1;
+	private double				delay				= 0;
+	private double				delayRndRange		= 0;
+	private double				hp					= -1;
+	private double				lifeTime			= -1;
+	private boolean				explodeOnDeath		= false;
+	private int					count				= 1;
+	private boolean				isPerPlayerCount	= false;
 
 	//#### NON PERSIST BUFFERS ####
-	private static Random rnd = new Random();
-	private boolean hasGlobalCd = false;
-	private final List<Integer> runningTasks = new ArrayList<Integer>();
-	private int count = 1;
-
+	private static Random		rnd					= new Random();
+	private boolean				hasGlobalCd			= false;
+	private final List<Integer>	runningTasks		= new ArrayList<Integer>();
 
 
 
@@ -55,6 +46,7 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 		this.radius = radius;
 		this.entityType = entityType;
 	}
+
 	public AA_MonsterTrigger(final Vector signPosition, final Vector attachedBlockPosition, final boolean isSpawnTrigger, final double radius, final int newScore) {
 		super();
 		this.signPosition = signPosition;
@@ -63,6 +55,7 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 		this.radius = radius;
 		this.newScore = newScore;
 	}
+
 	public AA_MonsterTrigger(final Map<String, Object> serializedForm) {
 		signPosition = (Vector) serializedForm.get("signPosition");
 		attachedBlockPosition = (Vector) serializedForm.get("attachedBlockPosition");
@@ -75,10 +68,14 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 		lifeTime = (double) serializedForm.get("lifeTime");
 		explodeOnDeath = (boolean) serializedForm.get("explodeOnDeath");
 		newScore = (int) serializedForm.get("newScore");
-		if(serializedForm.containsKey("count")) {
+		if (serializedForm.containsKey("count")) {
 			count = (int) serializedForm.get("count");
 		}
+		if (serializedForm.containsKey("isPerPlayerCount")) {
+			isPerPlayerCount = (boolean) serializedForm.get("isPerPlayerCount");
+		}
 	}
+
 	@Override
 	public Map<String, Object> serialize() {
 		Map<String, Object> serializedForm = new HashMap<String, Object>();
@@ -94,18 +91,16 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 		serializedForm.put("explodeOnDeath", explodeOnDeath);
 		serializedForm.put("newScore", newScore);
 		serializedForm.put("count", count);
+		serializedForm.put("isPerPlayerCount", isPerPlayerCount);
 		return serializedForm;
 	}
-
-
-
 
 
 
 	//#### API ####
 	public void checkRangeAndTrigger(final Player p, final AA_MiniGame mg) {
 		if (isInside(p.getLocation().toVector())) {
-			if (newScore>=0) {
+			if (newScore >= 0) {
 				triggerScore(p);
 			}
 			else if (!hasGlobalCd) {
@@ -114,14 +109,16 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 
 		}
 	}
+
 	public void checkAndTrigger(final World w, final AA_MiniGame mg) {
 		if (!hasGlobalCd) {
 			triggerSpawn(w, mg);
 		}
 	}
+
 	public void reset() {
 		hasGlobalCd = false;
-		for(int id: runningTasks) {
+		for (int id: runningTasks) {
 			AdventureArena.cancelTask(id);
 		}
 		runningTasks.clear();
@@ -129,24 +126,23 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 
 
 
-
-
-
 	//#### PRIVATE API ####
 	private void triggerScore(final Player p) {
-		if (p!=null) {
+		if (p != null) {
 			AA_ScoreManager.onSetScoreCmd(p, newScore);
 		}
 	}
+
 	private void triggerSpawn(final World w, final AA_MiniGame mg) {
 		hasGlobalCd = true;
 		final Location airBlockAboveAttachedBlockTelePos = AA_TerrainHelper.getAirBlockAboveGroundTelePos(attachedBlockPosition.toLocation(w), true);
 
 		AA_SelfCancelingTask spawnTask = new AA_SelfCancelingTask() {
+
 			@Override
 			public void tick() {
 				final Entity entity = w.spawnEntity(airBlockAboveAttachedBlockTelePos, entityType);
-				if (entity instanceof Creature && hp>0) {
+				if (entity instanceof Creature && hp > 0) {
 					Creature creature = (Creature) entity;
 					creature.setMaxHealth(hp);
 					creature.setHealth(hp);
@@ -156,18 +152,22 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 						ee.setHelmet(new ItemStack(Material.PUMPKIN));
 					}
 				}
-				if (lifeTime>0) {
+				if (lifeTime > 0) {
 					entity.setCustomNameVisible(true);
 					AA_SelfCancelingTask explosionTimerTask = new AA_SelfCancelingTask() {
+
 						@Override
 						public void tick() {
-							ChatColor cc = getNumberOfExecutionsLeft()<3 ? ChatColor.RED : ChatColor.BLUE;
-							entity.setCustomName(cc.toString() + getNumberOfExecutionsLeft());
-							AA_MessageSystem.consoleDebug("EXPLODE: " + cc.toString() + getNumberOfExecutionsLeft());
+							if (explodeOnDeath) {
+								ChatColor cc = getNumberOfExecutionsLeft() < 3 ? ChatColor.RED : ChatColor.BLUE;
+								entity.setCustomName(cc.toString() + getNumberOfExecutionsLeft());
+								AA_MessageSystem.consoleDebug("EXPLODE: " + cc.toString() + getNumberOfExecutionsLeft());
+							}
 						}
+
 						@Override
 						public void lastTick() {
-							if(entity.isValid()) {
+							if (entity.isValid()) {
 								if (explodeOnDeath) {
 									float power = 4;
 									if (entity instanceof LivingEntity) {
@@ -182,10 +182,11 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 						}
 					};
 
-					explosionTimerTask.schedule(0, 1, (int) Math.round(lifeTime)+1);
+					explosionTimerTask.schedule(0, 1, (int) Math.round(lifeTime) + 1);
 					runningTasks.add(explosionTimerTask.getTaskId());
 				}
 			}
+
 			@Override
 			public void lastTick() {
 				tick();
@@ -193,22 +194,19 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 		};
 
 
-		if (delay==0 && count==1) {
+		if (delay == 0 && count == 1) {
 			spawnTask.tick();
-		} else {
-			spawnTask.schedule(delay + rnd.nextDouble()*delayRndRange, 1, count);
+		}
+		else {
+			int finalCount = count * (isPerPlayerCount ? mg.getNumberOfPlayersRemaining() : 1);
+			spawnTask.schedule(delay + rnd.nextDouble() * delayRndRange, 1, finalCount);
 			runningTasks.add(spawnTask.getTaskId());
 		}
 	}
 
-
 	private boolean isInside(final Vector v) {
-		return attachedBlockPosition.distanceSquared(v) <= radius*radius;
+		return attachedBlockPosition.distanceSquared(v) <= radius * radius;
 	}
-
-
-
-
 
 
 
@@ -216,53 +214,72 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 	public boolean isOnGlobalCd() {
 		return hasGlobalCd;
 	}
+
 	public void setDelay(final double delay) {
 		this.delay = Math.max(0, delay);
 	}
+
 	public void setDelayRndRange(final double delayRndRange) {
 		this.delayRndRange = Math.abs(delayRndRange);
 	}
+
 	public void setHp(final double hp) {
 		this.hp = hp;
 	}
+
 	public void setLifeTime(final double lifeTime) {
 		this.lifeTime = lifeTime;
 	}
+
 	public boolean isSpawnTrigger() {
 		return isSpawnTrigger;
 	}
+
 	public Vector getSignPos() {
 		return signPosition;
 	}
+
 	public boolean isExplodeOnDeath() {
 		return explodeOnDeath;
 	}
+
 	public void setExplodeOnDeath(final boolean explodeOnDeath) {
 		this.explodeOnDeath = explodeOnDeath;
 	}
+
 	public void setCount(final int count) {
 		this.count = count;
 	}
 
+	public boolean isPerPlayerCount() {
+		return isPerPlayerCount;
+	}
+
+	public void setPerPlayerCount(final boolean isPerPlayerCount) {
+		this.isPerPlayerCount = isPerPlayerCount;
+	}
 
 
 	//#### OVERRIDE ####
 	@Override
 	public boolean equals(final Object obj) {
 		if (!(obj instanceof AA_MonsterTrigger)) return false;
-		return signPosition.equals(((AA_MonsterTrigger)obj).signPosition);
+		return signPosition.equals(((AA_MonsterTrigger) obj).signPosition);
 	}
+
 	@Override
 	public String toString() {
 		return "AA_MonsterTrigger [isSpawnTrigger=" + isSpawnTrigger
-				+ ", radius=" + radius + ", entityType=" + entityType
-				+ ", delay=" + delay + ", delayRndRange=" + delayRndRange
-				+ ", hp=" + hp + ", lifeTime=" + lifeTime + ", hasGlobalCd="
-				+ hasGlobalCd + ", runningTasks=" + runningTasks + "]";
+			+ ", radius=" + radius + ", entityType=" + entityType
+			+ ", delay=" + delay + ", delayRndRange=" + delayRndRange
+			+ ", hp=" + hp + ", lifeTime=" + lifeTime + ", hasGlobalCd="
+			+ hasGlobalCd + ", runningTasks=" + runningTasks + "]";
 	}
+
 	public int getNewScore() {
 		return newScore;
 	}
+
 	public void setNewScore(final int newScore) {
 		this.newScore = newScore;
 	}

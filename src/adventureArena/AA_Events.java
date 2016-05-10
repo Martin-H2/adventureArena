@@ -1,11 +1,6 @@
 package adventureArena;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-
+import java.util.*;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
@@ -20,34 +15,19 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
-import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.entity.EntityExplodeEvent;
-import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.player.PlayerAnimationEvent;
-import org.bukkit.event.player.PlayerAnimationType;
-import org.bukkit.event.player.PlayerBedEnterEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerExpChangeEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerKickEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.util.BlockVector;
 
-@SuppressWarnings("deprecation")
+@SuppressWarnings ("deprecation")
 public class AA_Events implements Listener {
 
-	static Map<Player,BlockVector> currentPlayerBlockPos = new HashMap<Player, BlockVector>();
+	static Map<Player, BlockVector>	currentPlayerBlockPos	= new HashMap<Player, BlockVector>();
 
 
-	private static HashSet<Byte> transparent = new HashSet<Byte>();
+	private static HashSet<Byte>	transparent				= new HashSet<Byte>();
 	static {
 		transparent.add((byte) Material.AIR.getId());
 		transparent.add((byte) Material.LONG_GRASS.getId());
@@ -62,14 +42,17 @@ public class AA_Events implements Listener {
 			currentPlayerBlockPos.put(e.getPlayer(), newPosRounded);
 			onBlockEnter(e.getPlayer(), newPosRounded, e.getTo().getBlock());
 		}
+
+		//		Location target = e.getTo();
+		//
+		//		int simpleHash = target.getBlockX()+target.getBlockY()*100+target.getBlockX()*10000;
 	}
 
 	private void onBlockEnter(final Player player, final BlockVector newPosRounded, final Block block) {
-		// TODO Auto-generated method stub
 		//player.sendMessage("BLOCK-ENTER: " + newPosRounded.toString());
 		if (AA_MiniGameControl.isPlayingMiniGame(player)) {
 			AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(player);
-			if (mg!=null) {
+			if (mg != null) {
 				for (AA_MonsterTrigger mt: mg.getRangedMonsterTriggers()) {
 					//AA_MessageSystem.consoleDebug("TRIGGER: " + mt);
 					mt.checkRangeAndTrigger(player, mg);
@@ -82,9 +65,9 @@ public class AA_Events implements Listener {
 
 	@EventHandler
 	public void onPlayerJoin(final PlayerJoinEvent event) {
-		if(!AA_MiniGameControl.isInMiniGameHub(event.getPlayer())) {
+		if (!AA_MiniGameControl.isInMiniGameHub(event.getPlayer())) {
 			event.getPlayer().setGameMode(Bukkit.getDefaultGameMode());
-			if(AA_MiniGameControl.isInMgHubAABB(event.getPlayer().getLocation())) {
+			if (AA_MiniGameControl.isInMgHubAABB(event.getPlayer().getLocation())) {
 				AA_MiniGameControl.leaveMiniGameHub(event.getPlayer(), null);
 			}
 		}
@@ -108,11 +91,12 @@ public class AA_Events implements Listener {
 
 	@EventHandler
 	public void onEntityDamageByEntity(final EntityDamageByEntityEvent e) {
-		if(e.getEntity() instanceof Player) {
+		if (e.getEntity() instanceof Player) {
 			Player attackedPlayer = (Player) e.getEntity();
-			if(AA_MiniGameControl.isWatchingMiniGames(attackedPlayer)) {
+			if (AA_MiniGameControl.isWatchingMiniGames(attackedPlayer)) {
 				e.setCancelled(true);
-			} else if (AA_MiniGameControl.isPlayingMiniGame(attackedPlayer) && e.getDamager() instanceof Player) {
+			}
+			else if (AA_MiniGameControl.isPlayingMiniGame(attackedPlayer) && e.getDamager() instanceof Player) {
 				Player attackingPlayer = (Player) e.getDamager();
 				AA_MiniGame mg = AA_MiniGameControl.getMiniGameContainingLocation(attackedPlayer.getLocation());
 				if (!mg.isPvpDamage() || AA_TeamManager.isSameTeam(attackedPlayer, attackingPlayer) && !AA_TeamManager.isFFaTeam(attackedPlayer)) {
@@ -121,12 +105,13 @@ public class AA_Events implements Listener {
 			}
 		}
 	}
+
 	@EventHandler
 	public void onEntityDamage(final EntityDamageEvent e) {
-		if(e.getEntity() instanceof Player) {
+		if (e.getEntity() instanceof Player) {
 			Player p = (Player) e.getEntity();
 			AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(p);
-			if(AA_MiniGameControl.isPlayingMiniGame(p) && mg!=null && mg.isOver()) {
+			if (AA_MiniGameControl.isPlayingMiniGame(p) && mg != null && mg.isOver()) {
 				e.setCancelled(true);
 			}
 		}
@@ -135,27 +120,24 @@ public class AA_Events implements Listener {
 	//	@EventHandler
 	//	public void onItemSpawn(final ItemSpawnEvent e) {
 	//		if(AA_MiniGameControl.getMiniGameContainingLocation(e.getLocation())!=null){
-	//			//FIXME test
+	//			//test
 	//			//e.setCancelled(true);
 	//		}
 	//	}
 
 	@EventHandler
 	public void onCreatureSpawn(final CreatureSpawnEvent e) {
-		//		if(e.getSpawnReason()==SpawnReason.NATURAL && AA_MiniGameControl.getMiniGameContainingLocation(e.getLocation())!=null){ //TODO improve this with isInsideMgHub()
-		//			e.setCancelled(true);
-		//		}
-
-		if(AA_MiniGameControl.isInMgHubAABB(e.getLocation())) {
+		if (AA_MiniGameControl.isInMgHubAABB(e.getLocation())) {
 			//AA_MessageSystem.consoleDebug("CreatureSpawnEvent: " + e.getSpawnReason() + ", " + e.getEntityType());
-			if (e.getSpawnReason()==SpawnReason.NATURAL) {
+			if (e.getSpawnReason() == SpawnReason.NATURAL) {
 				AA_MiniGame mg = AA_MiniGameControl.getMiniGameContainingLocation(e.getLocation());
-				if(mg!=null && (mg.isInProgress() || mg.isLockedByEditSession())) {
+				if (mg != null && (mg.isInProgress() || mg.isLockedByEditSession())) {
 					e.setCancelled(true);
 				}
 			}
 		}
 	}
+
 	@EventHandler
 	public void onPlayerDeath(final PlayerDeathEvent event) {
 		Player player = event.getEntity();
@@ -163,10 +145,12 @@ public class AA_Events implements Listener {
 			event.setKeepLevel(true);
 			AA_ScoreManager.onPlayerDeath(event.getEntity());
 			AA_MiniGameControl.leaveCurrentMiniGame(player, true);
-		} else {
+		}
+		else {
 			event.setKeepLevel(false);
 		}
 	}
+
 	@EventHandler
 	public void onEntityDeath(final EntityDeathEvent event) {
 		Player killer = event.getEntity().getKiller();
@@ -174,10 +158,12 @@ public class AA_Events implements Listener {
 			AA_ScoreManager.onEntityDeath(event.getEntity(), killer);
 		}
 	}
+
 	@EventHandler
 	public void onPlayerRespawn(final PlayerRespawnEvent event) {
 		if (AA_MiniGameControl.isInMiniGameHub(event.getPlayer())) {
 			AdventureArena.executeDelayed(0.2, new Runnable() {
+
 				@Override
 				public void run() {
 					AA_MiniGameControl.setMiniGameSpectator(event.getPlayer(), false, event.getPlayer().getBedSpawnLocation());
@@ -185,20 +171,24 @@ public class AA_Events implements Listener {
 			});
 		}
 	}
+
 	@EventHandler
 	public void onPlayerQuit(final PlayerQuitEvent e) {
-		AA_MiniGameControl.kickIfPlayingMiniGame(e.getPlayer());
+		AA_MiniGameControl.kickIfPlayingMiniGame(e.getPlayer());//FIXME kick always from hub! -CHECK
+		AA_MiniGameControl.leaveMiniGameHub(e.getPlayer(), null);
 	}
+
 	@EventHandler
 	public void onPlayerKick(final PlayerKickEvent e) {
 		AA_MiniGameControl.kickIfPlayingMiniGame(e.getPlayer());
+		AA_MiniGameControl.leaveMiniGameHub(e.getPlayer(), null);
 	}
 
 
 
 	// ############## NO CHEATING WITH CREATIVE ################
 
-	@EventHandler(priority=EventPriority.HIGHEST)
+	@EventHandler (priority = EventPriority.HIGHEST)
 	public void onPlayerBedEnter(final PlayerBedEnterEvent e) {
 		if (AA_MiniGameControl.isInMiniGameHub(e.getPlayer())) {
 			e.setCancelled(true);
@@ -207,7 +197,7 @@ public class AA_Events implements Listener {
 
 	@EventHandler
 	public void onPlayerExpChange(final PlayerExpChangeEvent e) {
-		if (e.getPlayer().getGameMode()==GameMode.CREATIVE) {
+		if (e.getPlayer().getGameMode() == GameMode.CREATIVE) {
 			e.setAmount(0);
 		}
 	}
@@ -224,6 +214,7 @@ public class AA_Events implements Listener {
 	public void onBlockPlace(final BlockPlaceEvent event) {
 		onBlockModify(event.getBlock(), event.getPlayer(), event);
 	}
+
 	public void onBlockModify(final Block block, final Player player, final Cancellable c) {
 		antiCheatControl(player, block, c);
 	}
@@ -240,9 +231,9 @@ public class AA_Events implements Listener {
 		antiCheatControl(event.getPlayer(), null, event);
 	}
 
-	private void antiCheatControl(final Player player, final Block block, final Cancellable c) { //FIXME NPE @ granting creative !
-		if (player!=null && player.getGameMode()==GameMode.CREATIVE && !player.isOp()) {
-			if (block!=null && AA_TerrainHelper.isUndestroyableArenaBorder(block)) {
+	private void antiCheatControl(final Player player, final Block block, final Cancellable c) {
+		if (player != null && player.getGameMode() == GameMode.CREATIVE && !player.isOp()) {
+			if (block != null && AA_TerrainHelper.isUndestroyableArenaBorder(block)) {
 				c.setCancelled(true);
 				AA_MessageSystem.sideNote("You can leave this area by right-clicking a sign labeled " + ChatColor.BLUE + "[exit]", player);
 			}
@@ -257,7 +248,6 @@ public class AA_Events implements Listener {
 
 
 
-
 	// ############## SIGN EDIT ################
 
 	@EventHandler
@@ -268,7 +258,8 @@ public class AA_Events implements Listener {
 			if (signCommand != null && signCommand.isClickCommand()) {
 				blocksToRemove.add(b);
 				blocksToRemove.add(signCommand.getAttachedBlock());
-			} else if (AA_TerrainHelper.isUndestroyableArenaBorder(b)) {
+			}
+			else if (AA_TerrainHelper.isUndestroyableArenaBorder(b)) {
 				blocksToRemove.add(b);
 			}
 		}
@@ -286,7 +277,7 @@ public class AA_Events implements Listener {
 			signCommand.executeOnBreak(event.getPlayer(), event, isEditMode);
 		}
 		List<Block> attachedSigns = AA_TerrainHelper.getAttachedSigns(event.getBlock());
-		for(Block b: attachedSigns) {
+		for (Block b: attachedSigns) {
 			signCommand = AA_SignCommand.createFrom(b);
 			if (signCommand != null) {
 				signCommand.executeOnBreak(event.getPlayer(), event, isEditMode);
@@ -294,14 +285,14 @@ public class AA_Events implements Listener {
 		}
 
 	}
+
 	@EventHandler
 	public void onSignChange(final SignChangeEvent event) {
-		final AA_SignCommand signCommand = AA_SignCommand.createFrom(event.getBlock(), event.getLines() , event);
+		final AA_SignCommand signCommand = AA_SignCommand.createFrom(event.getBlock(), event.getLines(), event);
 		if (signCommand != null) {
 			signCommand.executeOnCreation(event.getPlayer(), event.getPlayer().getWorld());
 		}
 	}
-
 
 
 
@@ -311,46 +302,39 @@ public class AA_Events implements Listener {
 	public void onPlayerInteract(final PlayerInteractEvent event) {
 		if (event.getPlayer().getGameMode().equals(GameMode.CREATIVE) && event.getAction().equals(Action.RIGHT_CLICK_BLOCK)) {
 			onSignClick(event.getPlayer(), event.getClickedBlock());
+			if (event.getClickedBlock().getType() == Material.ENDER_CHEST) {
+				event.setCancelled(true);
+				//Bukkit.createInventory(p, 27, ChatColor.GRAY + "EnderChest" + "(" + p.getName() + ")");
+			}
 		}
 	}
+
 	@EventHandler
 	public void onPlayerAnimation(final PlayerAnimationEvent event) {
 		if (event.getPlayer().getGameMode().equals(AA_MiniGameControl.MINIGAME_HUB_GAMEMODE) && event.getAnimationType().equals(PlayerAnimationType.ARM_SWING)) {
 			List<Block> targetBlocks = event.getPlayer().getLineOfSight(transparent, 3);
-			for (int i=0; i<targetBlocks.size(); i++) {
+			for (int i = 0; i < targetBlocks.size(); i++) {
 				if (targetBlocks.get(i).getType().equals(Material.SIGN_POST)) {
 					AA_Events.onSignClick(event.getPlayer(), targetBlocks.get(i));
 					break;
-				} else if (targetBlocks.get(i).getType().equals(Material.WALL_SIGN)
-						&& i+1==targetBlocks.size()
-						|| i+1<targetBlocks.size()
-						&& !targetBlocks.get(i+1).getType().equals(Material.WALL_SIGN)) {
+				}
+				else if (targetBlocks.get(i).getType().equals(Material.WALL_SIGN)
+					&& i + 1 == targetBlocks.size()
+					|| i + 1 < targetBlocks.size()
+					&& !targetBlocks.get(i + 1).getType().equals(Material.WALL_SIGN)) {
 					AA_Events.onSignClick(event.getPlayer(), targetBlocks.get(i));
 					break;
 				}
 			}
 		}
 	}
+
 	public static void onSignClick(final Player player, final Block block) {
 		AA_SignCommand signCommand = AA_SignCommand.createFrom(block);
 		if (signCommand != null) {
 			signCommand.executeOnClick(player, null);
 		}
 	}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
