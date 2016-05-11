@@ -32,6 +32,15 @@ public class AdventureArena extends JavaPlugin {
 	}
 
 
+	@Override
+	public void onDisable() {
+		for (Player p: Bukkit.getOnlinePlayers()) {
+			if (AA_MiniGameControl.isInMiniGameHub(p)) {
+				AA_MiniGameControl.kickFromMiniGameAndHub(p);
+			}
+		}
+	}
+
 	public static AdventureArena getInstance() {
 		return instance;
 	}

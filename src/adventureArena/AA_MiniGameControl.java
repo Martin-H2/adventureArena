@@ -41,9 +41,6 @@ public class AA_MiniGameControl {
 
 
 
-	//TODO expo helm
-	//TODO port upwards
-
 	// ################ MINIGAME HUB ##################
 
 	public static void joinMiniGameHub(final Player player, Location target) {
@@ -134,7 +131,7 @@ public class AA_MiniGameControl {
 					block = world.getBlockAt(x, y, z);
 					AA_SignCommand signCommand = AA_SignCommand.createFrom(block);
 					if (signCommand != null) {
-						foundSignCommands.add(signCommand);
+						foundSignCommands.add(signCommand); //TODO !test 4 highscore signs
 					}
 				}
 			}
@@ -179,7 +176,7 @@ public class AA_MiniGameControl {
 					mg.setInProgress(false);
 					mg.wipeEntities();
 					mg.wipePlaySession();
-					mg.restoreEnvironmentBackup();
+					mg.restoreEnvironmentBackup(); //TODO really needed ?
 
 				}
 			}
@@ -242,6 +239,10 @@ public class AA_MiniGameControl {
 		}
 
 		if (isPlayerInsideHisEditableArea(player)) {
+			// START EDITING NOW
+			if (!miniGame.isInProgress() && !miniGame.isLockedByEditSession()) {
+				miniGame.restoreEnvironmentBackup();
+			}
 			Block target = AA_TerrainHelper.getAirBlockAboveGround(player.getLocation().getBlock().getRelative(BlockFace.DOWN, 3), false);
 			player.setBedSpawnLocation(miniGame.getSpectatorRespawnPoint(), true);
 			teleportSafe(player, target);
@@ -432,9 +433,9 @@ public class AA_MiniGameControl {
 			int id = config.getInt(AA_ConfigPaths.activeMinigameId + "." + player.getName());
 			mg = getMiniGame(id);
 		}
-		if (mg == null) {
-			mg = getMiniGameContainingLocation(player.getLocation());
-		}
+		//		if (mg == null) {
+		//			mg = getMiniGameContainingLocation(player.getLocation());
+		//		}
 		return mg;
 	}
 
@@ -555,6 +556,46 @@ public class AA_MiniGameControl {
 				AA_MessageSystem.success("gave " + p.getName() + " editing power for " + mg.getName(), commandExecutor);
 			}
 			mg.persist();
+		}
+	}
+
+
+
+	public static void kickFromMiniGameAndHub(Player p) {
+		kickIfPlayingMiniGame(p); //FIXME !test kick always from hub
+		if (isInMiniGameHub(p)) {
+			leaveMiniGameHub(p, null);
+		}
+	}
+
+
+
+	public static void surroundingMiniGameRoomReset(Player player) {
+		AA_MiniGame mg = getMiniGameContainingLocation(player.getLocation());
+		if (mg != null) {
+			surroundingMiniGameSessionWipe(player);
+			mg.roomReset();
+			AA_ScoreManager.surroundingMiniGameScoreReset(player);
+		}
+		else {
+			AA_MessageSystem.error("no minigame found in this area", player);
+		}
+	}
+
+
+
+	public static void surroundingMiniGameFixSigns(Player player) {
+		AA_MiniGame mg = getMiniGameContainingLocation(player.getLocation());
+		if (mg != null) {
+			if (mg.isLockedByEditSession()) {
+				AA_TerrainHelper.fixSigns(mg);
+			}
+			else {
+				AA_MessageSystem.error("miniGame needs to be locked by an edit session", player);
+			}
+		}
+		else {
+			AA_MessageSystem.error("no minigame found in this area", player);
 		}
 	}
 

@@ -38,7 +38,7 @@ public class AA_MiniGame {
 	private boolean							inProgress				= false;
 	private World							world					= null;
 
-	//play session. TODO persist or ensure consistency
+	//play session.
 	//private final HashMap<String, List<Player>> teamPlayerMappings = new HashMap<String, List<Player>>();
 	private static Random					rnd						= new Random();
 	private final HashMap<String, Integer>	initialJoiners			= new HashMap<String, Integer>();
@@ -317,8 +317,10 @@ public class AA_MiniGame {
 	}
 
 	public void addAllowedEditor(final String name) {
-		allowedEditors.add(name);
-		needsPersisting = true;
+		if (!allowedEditors.contains(name)) {
+			allowedEditors.add(name);
+			needsPersisting = true;
+		}
 	}
 
 	public void removeAllowedEditor(final String name) {
@@ -374,7 +376,7 @@ public class AA_MiniGame {
 		return needsPersisting;
 	}
 
-	public boolean needsEnvironmentBackup() { //TODO improve this with onBlockModify()
+	public boolean needsEnvironmentBackup() {
 		return needsEnvironmentBackup;
 	}
 
@@ -406,21 +408,30 @@ public class AA_MiniGame {
 	//################## Environment ######################
 
 	public boolean doEnvironmentBackup() {
+		AA_MessageSystem.sideNoteForGroup("creating environment backup from " + name + " (id:" + id + ")", getAllowedEditors());
 		if (AA_TerrainHelper.saveMiniGameToSchematic(getNorthWestMin(), getSouthEastMax(), id, world)) {
 			needsEnvironmentBackup = false;
 			persist();
 			return true;
 		}
-		return false;
+		else {
+			AA_MessageSystem.errorForGroup("...backup failed!", getAllowedEditors());
+			return false;
+		}
+
 	}
 
 	public boolean restoreEnvironmentBackup() {
+		AA_MessageSystem.sideNoteForGroup("restoring environment backup from " + name + " (id:" + id + ")", getAllowedEditors());
 		if (AA_TerrainHelper.loadMinigameFromSchematic(id, world)) {
 			needsEnvironmentBackup = false;
 			persist();
 			return true;
 		}
-		return false;
+		else {
+			AA_MessageSystem.errorForGroup("...restore failed!", getAllowedEditors());
+			return false;
+		}
 	}
 
 	public void wipeEntities() {
@@ -630,6 +641,24 @@ public class AA_MiniGame {
 		return spectators;
 	}
 
+	public void roomReset() {
+		name = "newMiniGame";
+		king = null;
+		pvpDamage = false;
+		scoreMode = ScoreMode.ScoreByCommand;
+		spawnPoints.clear();
+		spawnEquipDefinitions.clear();
+		allowedEditors.clear();
+		rangedMonsterTriggers.clear();
+		startMonsterTriggers.clear();
+		needsPersisting = true;
+		needsEnvironmentBackup = true;
+		lockedByEditSession = false;
+		inProgress = false;
+		persist();
+		AA_TerrainHelper.resetMiniGameRoom(this);
+		doEnvironmentBackup();
+	}
 
 
 }

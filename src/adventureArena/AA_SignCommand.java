@@ -647,4 +647,11 @@ public class AA_SignCommand {
 
 
 
+	public static boolean isBorderCommandSign(Block block) {
+		AA_SignCommand sc = createFrom(block);
+		return sc != null && sc.getCommand().equals("border");
+	}
+
+
+
 }

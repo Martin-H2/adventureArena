@@ -1,7 +1,6 @@
 package adventureArena;
 
 import java.util.*;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -17,6 +16,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.util.BlockVector;
@@ -65,14 +65,9 @@ public class AA_Events implements Listener {
 
 	@EventHandler
 	public void onPlayerJoin(final PlayerJoinEvent event) {
-		if (!AA_MiniGameControl.isInMiniGameHub(event.getPlayer())) {
-			event.getPlayer().setGameMode(Bukkit.getDefaultGameMode());
-			if (AA_MiniGameControl.isInMgHubAABB(event.getPlayer().getLocation())) {
-				AA_MiniGameControl.leaveMiniGameHub(event.getPlayer(), null);
-			}
-		}
 		AA_MiniGameControl.kickIfPlayingMiniGame(event.getPlayer());
 	}
+
 
 
 	// ############## MINIGAME GAMEPLAY ################
@@ -98,9 +93,17 @@ public class AA_Events implements Listener {
 			}
 			else if (AA_MiniGameControl.isPlayingMiniGame(attackedPlayer) && e.getDamager() instanceof Player) {
 				Player attackingPlayer = (Player) e.getDamager();
-				AA_MiniGame mg = AA_MiniGameControl.getMiniGameContainingLocation(attackedPlayer.getLocation());
-				if (!mg.isPvpDamage() || AA_TeamManager.isSameTeam(attackedPlayer, attackingPlayer) && !AA_TeamManager.isFFaTeam(attackedPlayer)) {
-					e.setDamage(0);
+				AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(attackedPlayer); //TODO !TEST
+				if (AA_TeamManager.isAllied(attackedPlayer, attackingPlayer)) {
+					e.setCancelled(true);
+				}
+				else if (!mg.isPvpDamage()) {
+					if (e.getCause() == DamageCause.PROJECTILE) {
+						e.setDamage(0); //allow pushback only for projectiles
+					}
+					else {
+						e.setCancelled(true);
+					}
 				}
 			}
 		}
@@ -174,14 +177,12 @@ public class AA_Events implements Listener {
 
 	@EventHandler
 	public void onPlayerQuit(final PlayerQuitEvent e) {
-		AA_MiniGameControl.kickIfPlayingMiniGame(e.getPlayer());//FIXME kick always from hub! -CHECK
-		AA_MiniGameControl.leaveMiniGameHub(e.getPlayer(), null);
+		AA_MiniGameControl.kickFromMiniGameAndHub(e.getPlayer());
 	}
 
 	@EventHandler
 	public void onPlayerKick(final PlayerKickEvent e) {
-		AA_MiniGameControl.kickIfPlayingMiniGame(e.getPlayer());
-		AA_MiniGameControl.leaveMiniGameHub(e.getPlayer(), null);
+		AA_MiniGameControl.kickFromMiniGameAndHub(e.getPlayer());
 	}
 
 
@@ -202,13 +203,13 @@ public class AA_Events implements Listener {
 		}
 	}
 
-	//	@EventHandler
-	//	public void onPlayerTeleport(final PlayerTeleportEvent e) {
-	//		if ((e.getCause()==TeleportCause.END_PORTAL || e.getCause()==TeleportCause.NETHER_PORTAL )
-	//				&& (AA_MiniGameControl.getMiniGameContainingLocation(e.getFrom())!=null || AA_MiniGameControl.getMiniGameContainingLocation(e.getTo())!=null)) {
-	//			e.setCancelled(true);
-	//		}
-	//	}
+	@EventHandler
+	public void onPlayerTeleport(final PlayerTeleportEvent e) {
+		if ((AA_MiniGameControl.isPlayingMiniGame(e.getPlayer()) || AA_MiniGameControl.isEditingMiniGame(e.getPlayer())) //TODO !test
+			&& !AA_MiniGameControl.getMiniGameForPlayer(e.getPlayer()).isInsideBounds(e.getTo())) {
+			e.setCancelled(true);
+		}
+	}
 
 	@EventHandler
 	public void onBlockPlace(final BlockPlaceEvent event) {
@@ -220,7 +221,7 @@ public class AA_Events implements Listener {
 	}
 
 	@EventHandler
-	public void onInventoryOpen(final InventoryOpenEvent event) {//TODO use block enter event + netherPortal protection
+	public void onInventoryOpen(final InventoryOpenEvent event) {//use block enter event ?
 		if (event.getPlayer() instanceof Player) {
 			antiCheatControl((Player) event.getPlayer(), null, event);
 		}

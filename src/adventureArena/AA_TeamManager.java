@@ -90,6 +90,7 @@ public class AA_TeamManager {
 							// START GAME NOW !
 							if (AA_MiniGameControl.canJoinMiniGame(miniGame, getAllChallengersFor(miniGame))) {
 								miniGame.wipeEntities();
+								miniGame.restoreEnvironmentBackup();
 								for (String teamName: challengingTeamsForThisMiniGame.keySet()) {
 									AA_TeamChallenge team = challengingTeamsForThisMiniGame.get(teamName);
 									AA_TeamManager.startMiniGameForTeam(miniGame, team.getTeamName(), team.getPlayers());
@@ -204,9 +205,13 @@ public class AA_TeamManager {
 		return t1.equals(getTeam(p2));
 	}
 
-	public static boolean isFFaTeam(final Player attackedPlayer) {
-		Team t = getTeam(attackedPlayer);
+	public static boolean isFFaTeam(final Player p) {
+		Team t = getTeam(p);
 		return t != null && t.getName().endsWith(FFA_TEAM);
+	}
+
+	public static boolean isAllied(final Player p1, final Player p2) {
+		return isSameTeam(p1, p2) && !AA_TeamManager.isFFaTeam(p1);
 	}
 
 

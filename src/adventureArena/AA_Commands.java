@@ -10,10 +10,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class AA_Commands implements CommandExecutor {
 
 
-	public static final String joinMiniGameHub = "joinMiniGameHub";
-	public static final String leaveMiniGameHub = "leaveMiniGameHub";
-	public static final String serverinfo = "serverinfo";
-	public static final String mg = "mg";
+	public static final String	joinMiniGameHub		= "joinMiniGameHub";
+	public static final String	leaveMiniGameHub	= "leaveMiniGameHub";
+	public static final String	serverinfo			= "serverinfo";
+	public static final String	mg					= "mg";
 
 
 	public AA_Commands(final JavaPlugin javaPlugin) {
@@ -29,39 +29,56 @@ public class AA_Commands implements CommandExecutor {
 	public boolean onCommand(final CommandSender sender, final Command command, final String label, final String[] args) {
 		String commandName = command.getName();
 
+		if (commandName.equals(serverinfo)) {
+			serverInfo(sender);
+			return true;
+		}
+
+		// ############### INGAME ONLY #################
 		if (commandName.equals(mg) && args.length == 1 && sender instanceof Player) {
 			Player player = (Player) sender;
-			if(args[0].equals("info")) {
+
+			if (args[0].equals("info")) {
 				AA_MiniGameControl.surroundingMiniGameInfo(player);
 				return true;
 			}
+
 			if (AA_MiniGameControl.isPlayerInsideHisEditableArea(player)) {
-				if(args[0].equals("resetScore")) {
+				switch (args[0]) {
+				case "resetScore":
 					AA_ScoreManager.surroundingMiniGameScoreReset(player);
 					return true;
-				}
-				else if(args[0].equals("wipeSession")) {
+				case "wipeSession":
 					AA_MiniGameControl.surroundingMiniGameSessionWipe(player);
 					return true;
-				}
-				else if(args[0].equals("aas")) {
+				case "aas":
 					AA_MiniGameControl.surroundingMiniGameAllowAllSpectators(player);
 					return true;
+				case "resetRoom":
+					AA_MiniGameControl.surroundingMiniGameRoomReset(player);
+					return true;
+				case "fixSigns":
+					AA_MiniGameControl.surroundingMiniGameFixSigns(player);
+					return true;
 				}
-			} else {
-				AA_MessageSystem.error("You need edit access for this command.", sender);
 			}
-
+			else {
+				AA_MessageSystem.error("You need edit access for this command.", sender);
+				return true;
+			}
 		}
 
-		// ############### OPERATOR ONLY #################
+
+
+		// ############### OP ONLY FROM HERE #################
 		if (!sender.isOp()) {
 			AA_MessageSystem.error("You need to be Op for this.", sender);
 			return true;
 		}
 
 
-		if (commandName.equals(mg))  {
+		// ############### CONSOLE #################
+		if (commandName.equals(mg)) {
 			if (args.length == 3 && args[0].equals("addAllowedEditor")) {
 				Player player = AdventureArena.getOnlinePlayerStartingWith(args[2]);
 				if (player == null) return false;
@@ -69,7 +86,8 @@ public class AA_Commands implements CommandExecutor {
 					int id = Integer.parseInt(args[1]);
 					AA_MiniGameControl.addAllowedEditor(id, player, sender);
 					return true;
-				} catch (NumberFormatException e) {
+				}
+				catch (NumberFormatException e) {
 					return false;
 				}
 
@@ -79,7 +97,8 @@ public class AA_Commands implements CommandExecutor {
 					int id = Integer.parseInt(args[1]);
 					AA_MiniGameControl.removeAllowedEditor(id, args[2], sender);
 					return true;
-				} catch (NumberFormatException e) {
+				}
+				catch (NumberFormatException e) {
 					return false;
 				}
 
@@ -89,10 +108,6 @@ public class AA_Commands implements CommandExecutor {
 			}
 		}
 
-		if (commandName.equals(serverinfo))  {
-			serverInfo(sender);
-			return true;
-		}
 
 
 		//joinMiniGameHub Rei 124 40 -60
@@ -107,7 +122,8 @@ public class AA_Commands implements CommandExecutor {
 					int y = Integer.parseInt(args[2]);
 					int z = Integer.parseInt(args[3]);
 					target = new Location(player.getWorld(), x, y, z);
-				} catch (NumberFormatException e) {
+				}
+				catch (NumberFormatException e) {
 					return false;
 				}
 			}
@@ -127,7 +143,8 @@ public class AA_Commands implements CommandExecutor {
 					int y = Integer.parseInt(args[2]);
 					int z = Integer.parseInt(args[3]);
 					target = new Location(player.getWorld(), x, y, z);
-				} catch (NumberFormatException e) {
+				}
+				catch (NumberFormatException e) {
 					return false;
 				}
 			}

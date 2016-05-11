@@ -239,7 +239,7 @@ public class AA_ScoreManager {
 	}
 
 	public static void surroundingMiniGameScoreReset(final Player player) {
-		//FIXME test HS: delete empty lines
+		//FIXME !test HS: delete empty lines
 		AA_MiniGame mg = AA_MiniGameControl.getMiniGameContainingLocation(player.getLocation());
 		if (mg != null) {
 			AA_MessageSystem.sideNote("Resetting highScore for " + mg.getName(), player);
