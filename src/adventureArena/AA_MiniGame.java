@@ -28,8 +28,8 @@ public class AA_MiniGame {
 	private final List<AA_SpawnEquip>		spawnEquipDefinitions	= new ArrayList<AA_SpawnEquip>();
 	private final List<String>				allowedEditors			= new ArrayList<String>();
 	private final List<Vector>				highScoreSignLocations	= new ArrayList<Vector>();
-	private final List<AA_MonsterTrigger>	rangedMonsterTriggers	= new ArrayList<AA_MonsterTrigger>();
-	private final List<AA_MonsterTrigger>	startMonsterTriggers	= new ArrayList<AA_MonsterTrigger>();
+	private final List<AA_BlockTrigger>		rangedMonsterTriggers	= new ArrayList<AA_BlockTrigger>();
+	private final List<AA_BlockTrigger>		startMonsterTriggers	= new ArrayList<AA_BlockTrigger>();
 
 	private boolean							needsPersisting			= true;
 	private boolean							needsEnvironmentBackup	= true;
@@ -243,7 +243,7 @@ public class AA_MiniGame {
 		needsPersisting = true;
 	}
 
-	public void addMonsterTrigger(final AA_MonsterTrigger monsterTrigger) {
+	public void addMonsterTrigger(final AA_BlockTrigger monsterTrigger) {
 		if (monsterTrigger.isSpawnTrigger()) {
 			startMonsterTriggers.add(monsterTrigger);
 		}
@@ -254,15 +254,15 @@ public class AA_MiniGame {
 	}
 
 	public void removeMonsterTriggerBySignPos(final Vector monsterTriggerSignPos) {
-		for (Iterator<AA_MonsterTrigger> iter = startMonsterTriggers.iterator(); iter.hasNext();) {
-			AA_MonsterTrigger mt = iter.next();
+		for (Iterator<AA_BlockTrigger> iter = startMonsterTriggers.iterator(); iter.hasNext();) {
+			AA_BlockTrigger mt = iter.next();
 			if (monsterTriggerSignPos.equals(mt.getSignPos())) {
 				iter.remove();
 				needsPersisting = true;
 			}
 		}
-		for (Iterator<AA_MonsterTrigger> iter = rangedMonsterTriggers.iterator(); iter.hasNext();) {
-			AA_MonsterTrigger mt = iter.next();
+		for (Iterator<AA_BlockTrigger> iter = rangedMonsterTriggers.iterator(); iter.hasNext();) {
+			AA_BlockTrigger mt = iter.next();
 			if (monsterTriggerSignPos.equals(mt.getSignPos())) {
 				iter.remove();
 				needsPersisting = true;
@@ -270,11 +270,11 @@ public class AA_MiniGame {
 		}
 	}
 
-	public List<AA_MonsterTrigger> getRangedMonsterTriggers() {
+	public List<AA_BlockTrigger> getRangedMonsterTriggers() {
 		return rangedMonsterTriggers;
 	}
 
-	public List<AA_MonsterTrigger> getStartMonsterTriggers() {
+	public List<AA_BlockTrigger> getStartMonsterTriggers() {
 		return startMonsterTriggers;
 	}
 
@@ -408,7 +408,7 @@ public class AA_MiniGame {
 	//################## Environment ######################
 
 	public boolean doEnvironmentBackup() {
-		AA_MessageSystem.sideNoteForGroup("creating environment backup from " + name + " (id:" + id + ")", getAllowedEditors());
+		AA_MessageSystem.sideNoteForGroup("creating environment backup from " + name + " (id:" + id + ")", getPlayersInArea());
 		if (AA_TerrainHelper.saveMiniGameToSchematic(getNorthWestMin(), getSouthEastMax(), id, world)) {
 			needsEnvironmentBackup = false;
 			persist();
@@ -422,7 +422,7 @@ public class AA_MiniGame {
 	}
 
 	public boolean restoreEnvironmentBackup() {
-		AA_MessageSystem.sideNoteForGroup("restoring environment backup from " + name + " (id:" + id + ")", getAllowedEditors());
+		AA_MessageSystem.sideNoteForGroup("restoring environment backup from " + name + " (id:" + id + ")", getPlayersInArea());
 		if (AA_TerrainHelper.loadMinigameFromSchematic(id, world)) {
 			needsEnvironmentBackup = false;
 			persist();
@@ -433,6 +433,8 @@ public class AA_MiniGame {
 			return false;
 		}
 	}
+
+
 
 	public void wipeEntities() {
 		for (Entity e: world.getEntities()) {
@@ -536,10 +538,10 @@ public class AA_MiniGame {
 			t.unregister();
 		}
 		setInProgress(false);
-		for (AA_MonsterTrigger mt: startMonsterTriggers) {
+		for (AA_BlockTrigger mt: startMonsterTriggers) {
 			mt.reset();
 		}
-		for (AA_MonsterTrigger mt: rangedMonsterTriggers) {
+		for (AA_BlockTrigger mt: rangedMonsterTriggers) {
 			mt.reset();
 		}
 	}
@@ -640,6 +642,20 @@ public class AA_MiniGame {
 		}
 		return spectators;
 	}
+
+	/**
+	 * @return everybody inside minigame AABB (playing, editing, watching players)
+	 */
+	private Collection<Player> getPlayersInArea() {
+		List<Player> playersInArea = new ArrayList<Player>();
+		for (Player p: Bukkit.getOnlinePlayers()) {
+			if (isInsideBounds(p.getLocation())) {
+				playersInArea.add(p);
+			}
+		}
+		return playersInArea;
+	}
+
 
 	public void roomReset() {
 		name = "newMiniGame";

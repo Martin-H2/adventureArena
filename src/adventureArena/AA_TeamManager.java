@@ -72,6 +72,7 @@ public class AA_TeamManager {
 				}
 				else {
 					miniGame.wipeEntities();
+					miniGame.restoreEnvironmentBackup();
 					AA_TeamManager.startMiniGameForTeam(miniGame, teamName, playersAroundSign);
 				}
 				return;
@@ -135,7 +136,7 @@ public class AA_TeamManager {
 			}
 		}
 
-		for (AA_MonsterTrigger mt: miniGame.getStartMonsterTriggers()) {
+		for (AA_BlockTrigger mt: miniGame.getStartMonsterTriggers()) {
 			mt.checkAndTrigger(miniGame.getWorld(), miniGame);
 		}
 

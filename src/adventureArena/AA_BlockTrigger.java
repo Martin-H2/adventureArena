@@ -12,7 +12,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 
-public class AA_MonsterTrigger implements ConfigurationSerializable {
+public class AA_BlockTrigger implements ConfigurationSerializable {
 
 	private final Vector		signPosition;
 	private final Vector		attachedBlockPosition;
@@ -38,7 +38,7 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 
 
 	//#### OBJ LC ####
-	public AA_MonsterTrigger(final Vector signPosition, final Vector attachedBlockPosition, final boolean isSpawnTrigger, final double radius, final EntityType entityType) {
+	public AA_BlockTrigger(final Vector signPosition, final Vector attachedBlockPosition, final boolean isSpawnTrigger, final double radius, final EntityType entityType) {
 		super();
 		this.signPosition = signPosition;
 		this.attachedBlockPosition = attachedBlockPosition;
@@ -47,7 +47,7 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 		this.entityType = entityType;
 	}
 
-	public AA_MonsterTrigger(final Vector signPosition, final Vector attachedBlockPosition, final boolean isSpawnTrigger, final double radius, final int newScore) {
+	public AA_BlockTrigger(final Vector signPosition, final Vector attachedBlockPosition, final boolean isSpawnTrigger, final double radius, final int newScore) {
 		super();
 		this.signPosition = signPosition;
 		this.attachedBlockPosition = attachedBlockPosition;
@@ -56,7 +56,7 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 		this.newScore = newScore;
 	}
 
-	public AA_MonsterTrigger(final Map<String, Object> serializedForm) {
+	public AA_BlockTrigger(final Map<String, Object> serializedForm) {
 		signPosition = (Vector) serializedForm.get("signPosition");
 		attachedBlockPosition = (Vector) serializedForm.get("attachedBlockPosition");
 		isSpawnTrigger = (boolean) serializedForm.get("isSpawnTrigger");
@@ -161,7 +161,7 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 							if (explodeOnDeath) {
 								ChatColor cc = getNumberOfExecutionsLeft() < 3 ? ChatColor.RED : ChatColor.BLUE;
 								entity.setCustomName(cc.toString() + getNumberOfExecutionsLeft());
-								AA_MessageSystem.consoleDebug("EXPLODE: " + cc.toString() + getNumberOfExecutionsLeft());
+								//AA_MessageSystem.consoleDebug("EXPLODE: " + cc.toString() + getNumberOfExecutionsLeft());
 							}
 						}
 
@@ -205,7 +205,7 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 	}
 
 	private boolean isInside(final Vector v) {
-		return attachedBlockPosition.distanceSquared(v) <= radius * radius;
+		return attachedBlockPosition.distanceSquared(v) <= (radius + 1) * (radius + 1);
 	}
 
 
@@ -263,8 +263,8 @@ public class AA_MonsterTrigger implements ConfigurationSerializable {
 	//#### OVERRIDE ####
 	@Override
 	public boolean equals(final Object obj) {
-		if (!(obj instanceof AA_MonsterTrigger)) return false;
-		return signPosition.equals(((AA_MonsterTrigger) obj).signPosition);
+		if (!(obj instanceof AA_BlockTrigger)) return false;
+		return signPosition.equals(((AA_BlockTrigger) obj).signPosition);
 	}
 
 	@Override

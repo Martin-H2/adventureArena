@@ -19,6 +19,7 @@ import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
+import org.bukkit.event.world.PortalCreateEvent;
 import org.bukkit.util.BlockVector;
 
 @SuppressWarnings ("deprecation")
@@ -53,7 +54,7 @@ public class AA_Events implements Listener {
 		if (AA_MiniGameControl.isPlayingMiniGame(player)) {
 			AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(player);
 			if (mg != null) {
-				for (AA_MonsterTrigger mt: mg.getRangedMonsterTriggers()) {
+				for (AA_BlockTrigger mt: mg.getRangedMonsterTriggers()) {
 					//AA_MessageSystem.consoleDebug("TRIGGER: " + mt);
 					mt.checkRangeAndTrigger(player, mg);
 				}
@@ -65,7 +66,10 @@ public class AA_Events implements Listener {
 
 	@EventHandler
 	public void onPlayerJoin(final PlayerJoinEvent event) {
-		AA_MiniGameControl.kickIfPlayingMiniGame(event.getPlayer());
+		if (AA_MiniGameControl.isInMgHubAABB(event.getPlayer().getLocation())) {
+			AA_MiniGameControl.kickIfPlayingMiniGame(event.getPlayer());
+			AA_MiniGameControl.leaveMiniGameHub(event.getPlayer(), null);
+		}
 	}
 
 
@@ -144,6 +148,7 @@ public class AA_Events implements Listener {
 	@EventHandler
 	public void onPlayerDeath(final PlayerDeathEvent event) {
 		Player player = event.getEntity();
+		//player.sendMessage("[onPlayerDeath] player.isDead() = " + player.isDead());
 		if (AA_MiniGameControl.isPlayingMiniGame(player)) {
 			event.setKeepLevel(true);
 			AA_ScoreManager.onPlayerDeath(event.getEntity());
@@ -207,6 +212,17 @@ public class AA_Events implements Listener {
 	public void onPlayerTeleport(final PlayerTeleportEvent e) {
 		if ((AA_MiniGameControl.isPlayingMiniGame(e.getPlayer()) || AA_MiniGameControl.isEditingMiniGame(e.getPlayer())) //TODO !test
 			&& !AA_MiniGameControl.getMiniGameForPlayer(e.getPlayer()).isInsideBounds(e.getTo())) {
+			e.setCancelled(true);
+		}
+	}
+
+	@EventHandler
+	public void onPortalCreate(final PortalCreateEvent e) {
+		AA_MiniGame mg = AA_MiniGameControl.getMiniGameContainingLocation(e.getBlocks().iterator().next().getLocation());
+		if (mg != null) {
+			for (Block b: e.getBlocks()) {
+				b.setType(Material.STONE);
+			}
 			e.setCancelled(true);
 		}
 	}

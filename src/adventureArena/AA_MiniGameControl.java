@@ -114,7 +114,6 @@ public class AA_MiniGameControl {
 	}
 
 	public static void rebuildMiniGameCfg(final String worldName) {
-		// TODO rebuildMiniGameCfg
 		final World world = Bukkit.getWorld(worldName);
 		if (world == null) {
 			AA_MessageSystem.consoleError("world not found: " + worldName);
@@ -324,7 +323,7 @@ public class AA_MiniGameControl {
 		// ENVIRONMENT BACKUP CHECK
 		if (miniGame.needsEnvironmentBackup()) {
 			AA_MessageSystem.sideNoteForGroup("Saving environment backup of " + miniGame.getName(), players);
-			if (!miniGame.doEnvironmentBackup()) {
+			if (!miniGame.doEnvironmentBackup()) {//TODO crap
 				AA_MessageSystem.errorAll("Exception while performing area backup of " + miniGame.getName() + ", please inform admin.");
 				return false;
 			}
@@ -382,7 +381,7 @@ public class AA_MiniGameControl {
 			AA_ScoreManager.onPlayerLeft(mg, player);
 			if (mg.isVictory()) {
 				mg.setOver();
-				AdventureArena.executeDelayed(1, new Runnable() {
+				AdventureArena.executeDelayed(0.1, new Runnable() {
 
 					@Override
 					public void run() {
@@ -391,7 +390,7 @@ public class AA_MiniGameControl {
 						mg.wipeEntities();
 						mg.wipePlaySession();
 						//AA_MessageSystem.sideNoteForGroup("All players left your " + mg.getName() + ". Rolling back environment...", mg.getAllowedEditors());
-						mg.restoreEnvironmentBackup();//TODO rethink
+						//mg.restoreEnvironmentBackup();//TODO rethink
 					}
 				});
 			}

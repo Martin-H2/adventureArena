@@ -16,7 +16,7 @@ import org.bukkit.util.Vector;
 
 public class AA_SignCommand {
 
-	private static final String					ENCHANT_IDS_HELP			= ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "hub.spigotmc.org/javadocs/bukkit/org/bukkit/enchantments/Enchantment.html";
+	private static final String					ENCHANT_IDS_HELP			= ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "http://minecraft.gamepedia.com/Enchanting";
 	private static final String					MATERIAL_IDS_HELP			= ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html";
 	private static final String					ENTITY_IDS_HELP				= ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "hub.spigotmc.org/javadocs/bukkit/org/bukkit/entity/EntityType.html";
 	private static final double					PLAYER_COMMAND_DELAY_SEC	= 1.0;
@@ -193,6 +193,7 @@ public class AA_SignCommand {
 	}
 
 
+	@SuppressWarnings ("deprecation")
 	public boolean executeOnCreation(final Player optionalCreator, final World world) {
 		if (!commands.contains(command)) {
 			failAndBreak(optionalCreator, "Unknown command: " + highlightColor() + command + errorColor() + ", possible is: " + ultraHighlightColor() + commands.toString());
@@ -294,47 +295,51 @@ public class AA_SignCommand {
 			Material targetMaterial = null;
 			int amount = 0;
 			Enchantment ench = null;
-			int enchLevel = 0;
+			int enchLevel = 1;
 
 			for (Entry<String, String> entry: parameterMap.entrySet()) {
 				if (lineIndex == 0) {
 					String itemName = entry.getKey();
-					try {
-						itemMaterial = Material.valueOf(itemName.toUpperCase());
-						if (validateIntParamater(optionalCreator, itemName, 1, 64)) {
-							amount = Integer.parseInt(entry.getValue());
-						}
-					}
-					catch (IllegalArgumentException e) {
+					itemMaterial = AA_Util.getEnumStartingWith(itemName, Material.class);
+					if (itemMaterial == null) {
 						failAndBreak(optionalCreator, "1st line needs to be an " + ultraHighlightColor() + "ItemId:amount" + errorColor() + "pair");
 						failAndBreak(optionalCreator, "Unknown item ID: " + highlightColor() + itemName + errorColor() + ", see all IDs here: " + MATERIAL_IDS_HELP);
 					}
+					if (validateIntParamater(optionalCreator, itemName, 1, 64)) {
+						amount = Integer.parseInt(entry.getValue());
+					}
+
 				}
 				if (entry.getKey().equals("for")) {
 					String itemName = entry.getValue();
-					try {
-						targetMaterial = Material.valueOf(itemName.toUpperCase());
-					}
-					catch (IllegalArgumentException e) {
+					targetMaterial = AA_Util.getEnumStartingWith(itemName, Material.class);
+					if (targetMaterial == null) {
 						failAndBreak(optionalCreator, "Unknown item ID: " + highlightColor() + itemName + errorColor() + ", see all IDs here: " + MATERIAL_IDS_HELP);
 					}
 				}
 				if (entry.getKey().equals("ench")) {
 					String[] enchVal = entry.getValue().split(" ");
-					if (enchVal.length != 2) {
+					if (enchVal.length < 1 || enchVal.length > 2) {
 						failAndBreak(optionalCreator, "Enchant line must be: " + ultraHighlightColor() + "ench:EnchId lvl" + errorColor() + ", see all IDs here: " + ENCHANT_IDS_HELP);
 					}
 					else {
 						String enchName = enchVal[0];
 						ench = Enchantment.getByName(enchName.toUpperCase());
+						try {
+							ench = Enchantment.getById(Integer.parseInt(enchName));
+						}
+						catch (Exception e1) {
+						}
 						if (ench == null) {
 							failAndBreak(optionalCreator, "Unknown enchant ID: " + highlightColor() + enchName + errorColor() + ", see all IDs here: " + ENCHANT_IDS_HELP);
 						}
 						try {
 							enchLevel = Integer.parseInt(enchVal[1]);
 						}
-						catch (NumberFormatException e1) {
-							failAndBreak(optionalCreator, "Enchant lvl must be a number: " + ultraHighlightColor() + "ench:EnchId lvl");
+						catch (Exception e1) {
+							if (optionalCreator != null) {
+								AA_MessageSystem.sideNote("no enchant level, assuming 1.", optionalCreator);
+							}
 						}
 					}
 				}
@@ -346,7 +351,7 @@ public class AA_SignCommand {
 					AA_MessageSystem.example("  [spawnEquip]", optionalCreator);
 					AA_MessageSystem.example(" dia_pickaxe:1", optionalCreator);
 					AA_MessageSystem.example(" for:redstone_b", optionalCreator);
-					AA_MessageSystem.example(" ench:dig_speed 5", optionalCreator);
+					AA_MessageSystem.example(" ench:32 5", optionalCreator);
 					AA_MessageSystem.sideNote("(dia_ is short for diamond_)", optionalCreator);
 					AA_MessageSystem.sideNote("(_b is short for _block)", optionalCreator);
 				}
@@ -393,7 +398,7 @@ public class AA_SignCommand {
 					}
 					if (!validateIntParamater(optionalCreator, "setScore", 0, 999)) return false;
 					newScore = Integer.parseInt(parameterMap.get("setScore"));
-					AA_MonsterTrigger mt = new AA_MonsterTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, newScore);
+					AA_BlockTrigger mt = new AA_BlockTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, newScore);
 					miniGame.addMonsterTrigger(mt);
 				}
 				else {
@@ -421,14 +426,18 @@ public class AA_SignCommand {
 						parameterMap.remove("count");
 					}
 					for (String monsterName: parameterMap.keySet()) {
-						EntityType entityType = EntityType.valueOf(monsterName.toUpperCase());
+						EntityType entityType = AA_Util.getEnumStartingWith(monsterName, EntityType.class);
+						if (entityType == null) {
+							failAndBreak(optionalCreator, "Unknown entity ID: " + highlightColor() + monsterName + errorColor() + ", see all IDs here: " + ENTITY_IDS_HELP);
+							throw new Exception();
+						}
 						String[] hpLifeTime = parameterMap.get(monsterName).split(DELIM_KOMMA);
 						double hp = Double.parseDouble(hpLifeTime[0]);
 						double lifeTime = -1;
 						if (hpLifeTime.length == 2) {
 							lifeTime = Double.parseDouble(hpLifeTime[1]);
 						}
-						AA_MonsterTrigger mt = new AA_MonsterTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, entityType);
+						AA_BlockTrigger mt = new AA_BlockTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, entityType);
 						mt.setDelay(delay);
 						mt.setDelayRndRange(delayRngRange);
 						mt.setHp(hp);
@@ -450,7 +459,7 @@ public class AA_SignCommand {
 					AA_MessageSystem.sideNote("where 100=hp and 10=lifeTime", optionalCreator);
 					AA_MessageSystem.sideNote("Entity IDs here: " + ENTITY_IDS_HELP, optionalCreator);
 				}
-				e.printStackTrace();
+				//e.printStackTrace();
 				return false;
 			}
 		}

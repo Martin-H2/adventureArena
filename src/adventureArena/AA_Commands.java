@@ -105,6 +105,7 @@ public class AA_Commands implements CommandExecutor {
 			}
 			else if (args.length == 2 && args[0].equals("rebuildMiniGameCfg")) {
 				AA_MiniGameControl.rebuildMiniGameCfg(args[1]);
+				return true;
 			}
 		}
 

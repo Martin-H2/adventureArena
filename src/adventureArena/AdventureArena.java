@@ -23,7 +23,7 @@ public class AdventureArena extends JavaPlugin {
 		}
 
 		ConfigurationSerialization.registerClass(AA_SpawnEquip.class);
-		ConfigurationSerialization.registerClass(AA_MonsterTrigger.class);
+		ConfigurationSerialization.registerClass(AA_BlockTrigger.class);
 		instance = this;
 		getServer().getPluginManager().registerEvents(new AA_Events(), this);
 		new AA_Commands(this);
@@ -76,6 +76,15 @@ public class AdventureArena extends JavaPlugin {
 		}
 		return null;
 	}
+
+
+	//	public static File getWorldSpecificDataFolder(World world) { //TODO use world folder ?
+	//		File folder = new File(world.getWorldFolder(), "MiniGameData");
+	//		if (!folder.exists()) {
+	//			folder.mkdirs();
+	//		}
+	//		return folder;
+	//	}
 
 
 

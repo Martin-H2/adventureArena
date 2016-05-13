@@ -26,8 +26,8 @@ public class AA_ScoreManager {
 		CMD_RATING,
 		LTS_RATING
 	}
-	private static final double	DEFAULT_RATING		= 100.0;
-	private static final double	AVERAGE_SCORESTEAL	= 5.0;
+	private static final double	DEFAULT_RATING		= 500.0;
+	private static final double	AVERAGE_SCORESTEAL	= 25.0;
 
 
 	public static void updateHighScoreLists() {
@@ -125,7 +125,7 @@ public class AA_ScoreManager {
 				sortedHighscoreList.put(playerName, scores.getDouble(playerName));
 			}
 		}
-		return Util.sortByValue(sortedHighscoreList, false);
+		return AA_Util.sortByValue(sortedHighscoreList, false);
 	}
 
 
@@ -150,7 +150,7 @@ public class AA_ScoreManager {
 			for (Player remainingPlayer: mg.getPlayersRemaining()) {
 				if (!dyingPlayer.equals(remainingPlayer)) {
 					killer = remainingPlayer;
-					AA_MessageSystem.gameplayWarningForGroup("detected suicide in 1vs1, counting as kill for " + killer.getName(), mg.getPlayersRemaining());
+					AA_MessageSystem.gameplayWarningForGroup("detected suicide in 1vs1, counting as kill for " + killer.getName(), mg.getPlayersRemaining()); //TODO !test suic
 					break;
 				}
 			}
@@ -164,10 +164,10 @@ public class AA_ScoreManager {
 			double newKillerRating = killerRating + stolenRating;
 			double newVictimRating = victimRating - stolenRating;
 			killer.sendMessage(String.format(
-					ChatColor.DARK_GRAY + "[Rating] " + ChatColor.GREEN + "You:%.2f->%.2f  " + ChatColor.GRAY + dyingPlayer.getName() + ":%.2f->%.2f",
+					ChatColor.DARK_GRAY + "[Rating] " + ChatColor.GREEN + "You:%.0f->%.0f  " + ChatColor.GRAY + dyingPlayer.getName() + ":%.0f->%.0f",
 					killerRating, newKillerRating, victimRating, newVictimRating));
 			dyingPlayer.sendMessage(String.format(
-					ChatColor.DARK_GRAY + "[Rating] " + ChatColor.RED + "You:%.2f->%.2f  " + ChatColor.GRAY + killer.getName() + ":%.2f->%.2f",
+					ChatColor.DARK_GRAY + "[Rating] " + ChatColor.RED + "You:%.0f->%.0f  " + ChatColor.GRAY + killer.getName() + ":%.0f->%.0f", //TODO !test
 					victimRating, newVictimRating, killerRating, newKillerRating));
 			setScore(mg, ScoreType.PVP_RATING, killer, newKillerRating);
 			setScore(mg, ScoreType.PVP_RATING, dyingPlayer, newVictimRating);
