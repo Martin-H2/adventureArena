@@ -36,29 +36,31 @@ public class AA_Commands implements CommandExecutor {
 
 		// ############### INGAME ONLY #################
 		if (commandName.equals(mg) && args.length == 1 && sender instanceof Player) {
-			Player player = (Player) sender;
+			Player commandSender = (Player) sender;
 
 			if (args[0].equals("info")) {
-				AA_MiniGameControl.surroundingMiniGameInfo(player);
+				AA_MiniGameControl.surroundingMiniGameInfo(commandSender);
 				return true;
 			}
 
-			if (AA_MiniGameControl.isPlayerInsideHisEditableArea(player)) {
+			if (AA_MiniGameControl.isPlayerInsideHisEditableArea(commandSender)) {
 				switch (args[0]) {
 				case "resetScore":
-					AA_ScoreManager.surroundingMiniGameScoreReset(player);
+					AA_ScoreManager.surroundingMiniGameScoreReset(commandSender);
 					return true;
 				case "wipeSession":
-					AA_MiniGameControl.surroundingMiniGameSessionWipe(player);
+					AA_MiniGameControl.surroundingMiniGameSessionWipe(commandSender);
 					return true;
 				case "aas":
-					AA_MiniGameControl.surroundingMiniGameAllowAllSpectators(player);
+					AA_MiniGameControl.surroundingMiniGameAllowAllSpectators(commandSender);
 					return true;
 				case "resetRoom":
-					AA_MiniGameControl.surroundingMiniGameRoomReset(player);
+					if (commandSender.isOp()) {
+						AA_MiniGameControl.surroundingMiniGameRoomReset(commandSender);
+					}
 					return true;
 				case "fixSigns":
-					AA_MiniGameControl.surroundingMiniGameFixSigns(player);
+					AA_MiniGameControl.surroundingMiniGameFixSigns(commandSender);
 					return true;
 				}
 			}

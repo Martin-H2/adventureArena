@@ -168,7 +168,7 @@ public class AA_ScoreManager {
 				addScore(mg, ScoreType.KILLS_PVP, killer);
 				double victimRating = getScore(mg, ScoreType.PVP_RATING, dyingPlayer, DEFAULT_RATING);
 				double killerRating = getScore(mg, ScoreType.PVP_RATING, killer, DEFAULT_RATING);
-				double stolenRating = ((victimRating - killerRating) / DEFAULT_RATING + 1.0) * AVERAGE_SCORESTEAL;
+				double stolenRating = ((victimRating - killerRating) / DEFAULT_RATING * 2 + 1.0) * AVERAGE_SCORESTEAL;
 				stolenRating = Math.max(0.0, Math.min(AVERAGE_SCORESTEAL * 2.0, stolenRating));
 				double newKillerRating = killerRating + stolenRating;
 				double newVictimRating = victimRating - stolenRating;
