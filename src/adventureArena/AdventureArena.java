@@ -78,7 +78,7 @@ public class AdventureArena extends JavaPlugin {
 	}
 
 
-	//	public static File getWorldSpecificDataFolder(World world) { //TODO use world folder ?
+	//	public static File getWorldSpecificDataFolder(World world) { //TODO ? use world folder ?
 	//		File folder = new File(world.getWorldFolder(), "MiniGameData");
 	//		if (!folder.exists()) {
 	//			folder.mkdirs();

@@ -90,9 +90,9 @@ public class AA_TerrainHelper {
 	// ##################### SCHEMATIC SAVING LOADING ###########################
 
 	public static boolean saveMiniGameToSchematic(final Vector northWestMin, final Vector southEastMax, final int id, final World world) {
-		//TODO save & load async ?
+		//TODO ? save & load async
 		File file = getMiniGameFile(id);
-		int specRoomHeight = 2; //TODO dynamic spec room height
+		int specRoomHeight = 2; //TODO ? dynamic spec room height
 		com.sk89q.worldedit.Vector min = new com.sk89q.worldedit.Vector(northWestMin.getX(), northWestMin.getY(), northWestMin.getZ());
 		com.sk89q.worldedit.Vector max = new com.sk89q.worldedit.Vector(southEastMax.getX(), southEastMax.getY() - specRoomHeight, southEastMax.getZ());
 		EditSession es = WorldEdit.getInstance().getEditSessionFactory().getEditSession(new BukkitWorld(world), -1);

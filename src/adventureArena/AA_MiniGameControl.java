@@ -44,17 +44,19 @@ public class AA_MiniGameControl {
 	// ################ MINIGAME HUB ##################
 
 	public static void joinMiniGameHub(final Player player, Location target) {
-		FileConfiguration config = getPluginConfig();
-		if (target == null) {
-			target = getMiniGameHubSpawn(player.getWorld());
-		}
-		if (target != null && AA_InventorySaver.saveInventoryAndPlayerMeta(player, AA_ConfigPaths.savedPlayerData)) {
-			player.setLevel(0);
-			player.setExp(0);
-			config.set(AA_ConfigPaths.isInMiniGameHub + "." + player.getName(), true);
-			savePluginConfig();
-			setMiniGameSpectator(player, false, target);
-			player.setBedSpawnLocation(target, true);
+		if (!isInMiniGameHub(player)) {
+			FileConfiguration config = getPluginConfig();
+			if (target == null) {
+				target = getMiniGameHubSpawn(player.getWorld());
+			}
+			if (target != null && AA_InventorySaver.saveInventoryAndPlayerMeta(player, AA_ConfigPaths.savedPlayerData)) {
+				player.setLevel(0);
+				player.setExp(0);
+				config.set(AA_ConfigPaths.isInMiniGameHub + "." + player.getName(), true);
+				savePluginConfig();
+				setMiniGameSpectator(player, false, target);
+				player.setBedSpawnLocation(target, true);
+			}
 		}
 	}
 
@@ -130,7 +132,7 @@ public class AA_MiniGameControl {
 					block = world.getBlockAt(x, y, z);
 					AA_SignCommand signCommand = AA_SignCommand.createFrom(block);
 					if (signCommand != null) {
-						foundSignCommands.add(signCommand); //TODO !test 4 highscore signs
+						foundSignCommands.add(signCommand);
 					}
 				}
 			}
@@ -171,21 +173,19 @@ public class AA_MiniGameControl {
 				miniGames.add(mg);
 				if (mg.isInProgress()) {
 					AA_MessageSystem.consoleWarn("miniGame was still in progress: '" + mg.getName() + "', cleaning up...");
-
 					mg.setInProgress(false);
 					mg.wipeEntities();
 					mg.wipePlaySession();
-					mg.restoreEnvironmentBackup(); //TODO really needed ?
-
+					//mg.restoreEnvironmentBackup();
 				}
 			}
 		}
 		for (Player p: Bukkit.getOnlinePlayers()) {
-			kickIfPlayingMiniGame(p);
+			kickIfInsideMiniGame(p);
 		}
 	}
 
-	public static void kickIfPlayingMiniGame(final Player p) {
+	public static void kickIfInsideMiniGame(final Player p) {
 		if (isPlayingMiniGame(p) || isEditingMiniGame(p)) {
 			AA_MiniGame mg = getMiniGameForPlayer(p);
 			AA_MessageSystem.consoleWarn("player " + p.getName() + " still in miniGame '" + mg.getName() + "', kicking...");
@@ -321,13 +321,13 @@ public class AA_MiniGameControl {
 			return false;
 		}
 		// ENVIRONMENT BACKUP CHECK
-		if (miniGame.needsEnvironmentBackup()) {
-			AA_MessageSystem.sideNoteForGroup("Saving environment backup of " + miniGame.getName(), players);
-			if (!miniGame.doEnvironmentBackup()) {//TODO crap
-				AA_MessageSystem.errorAll("Exception while performing area backup of " + miniGame.getName() + ", please inform admin.");
-				return false;
-			}
-		}
+		//		if (miniGame.needsEnvironmentBackup()) {
+		//			AA_MessageSystem.sideNoteForGroup("Saving environment backup of " + miniGame.getName(), players);
+		//			if (!miniGame.doEnvironmentBackup()) {
+		//				AA_MessageSystem.errorAll("Exception while performing area backup of " + miniGame.getName() + ", please inform admin.");
+		//				return false;
+		//			}
+		//		}
 		return true;
 	}
 
@@ -390,7 +390,7 @@ public class AA_MiniGameControl {
 						mg.wipeEntities();
 						mg.wipePlaySession();
 						//AA_MessageSystem.sideNoteForGroup("All players left your " + mg.getName() + ". Rolling back environment...", mg.getAllowedEditors());
-						//mg.restoreEnvironmentBackup();//TODO rethink
+						//mg.restoreEnvironmentBackup();
 					}
 				});
 			}
@@ -403,14 +403,11 @@ public class AA_MiniGameControl {
 		for (Player p: Bukkit.getOnlinePlayers()) {
 			AA_MiniGame playersMG = getMiniGameForPlayer(p);
 			if (mg.equals(playersMG) && isPlayingMiniGame(p)) {
-				if (!p.isDead()) {
+				if (!p.isDead()) { // dead players got removed anyway
 					AA_MessageSystem.success("You won " + mg.getName(), p);
 					AA_ScoreManager.onPlayerWin(mg, p);
 					mg.removePlayer(p);
 					setMiniGameSpectator(p, false, mg.getSpectatorRespawnPoint());
-				}
-				else {
-					//TODO dead spect
 				}
 			}
 		}
@@ -533,7 +530,7 @@ public class AA_MiniGameControl {
 				kickIfPlayingMiniGame(mg, p);
 			}
 			for (Player p: mg.getPlayersRemaining()) {
-				kickIfPlayingMiniGame(p);
+				kickIfInsideMiniGame(p);
 			}
 			if (mg.isInProgress() || mg.isLockedByEditSession()) {
 				mg.setLockedByEditSession(false);
@@ -561,7 +558,7 @@ public class AA_MiniGameControl {
 
 
 	public static void kickFromMiniGameAndHub(Player p) {
-		kickIfPlayingMiniGame(p); //FIXME !test kick always from hub
+		kickIfInsideMiniGame(p);
 		if (isInMiniGameHub(p)) {
 			leaveMiniGameHub(p, null);
 		}

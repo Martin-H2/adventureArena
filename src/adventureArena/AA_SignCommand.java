@@ -113,7 +113,9 @@ public class AA_SignCommand {
 
 	public boolean executeOnBreak(final Player breaker, final Cancellable c, final boolean isEditmode) {
 		if (!isEditmode) {
-			c.setCancelled(true);
+			if (isClickCommand()) {
+				c.setCancelled(true);
+			}
 			return false;
 		}
 		if (!commands.contains(command))

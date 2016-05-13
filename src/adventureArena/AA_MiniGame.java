@@ -196,7 +196,7 @@ public class AA_MiniGame {
 		persist();
 	}
 
-	public boolean isPvpDamage() {
+	public boolean isPvpDamageEnabled() {
 		return pvpDamage;
 	}
 
@@ -408,7 +408,7 @@ public class AA_MiniGame {
 	//################## Environment ######################
 
 	public boolean doEnvironmentBackup() {
-		AA_MessageSystem.sideNoteForGroup("creating environment backup from " + name + " (id:" + id + ")", getPlayersInArea());
+		AA_MessageSystem.sideNoteForGroup("Saving environment backup for '" + name + "' (id:" + id + ")", getPlayersInArea());
 		if (AA_TerrainHelper.saveMiniGameToSchematic(getNorthWestMin(), getSouthEastMax(), id, world)) {
 			needsEnvironmentBackup = false;
 			persist();
@@ -422,7 +422,7 @@ public class AA_MiniGame {
 	}
 
 	public boolean restoreEnvironmentBackup() {
-		AA_MessageSystem.sideNoteForGroup("restoring environment backup from " + name + " (id:" + id + ")", getPlayersInArea());
+		AA_MessageSystem.sideNoteForGroup("Loading environment backup for '" + name + "' (id:" + id + ")", getPlayersInArea());
 		if (AA_TerrainHelper.loadMinigameFromSchematic(id, world)) {
 			needsEnvironmentBackup = false;
 			persist();
@@ -564,21 +564,27 @@ public class AA_MiniGame {
 	//		if (t==null) return 0;
 	//		return t.getSize();
 	//	}
-	public int getNumberOfEnemiesRemaining(final Team team) {
+	public int getNumberOfEnemyPlayersRemaining(Player pov) {
+		if (!equals(AA_MiniGameControl.getMiniGameForPlayer(pov))) {
+			AA_MessageSystem.consoleError("getNumberOfEnemiesRemaining: " + pov.getName() + " is not inside " + getName());
+			return 0;
+		}
+		if (!isPvpDamageEnabled()) return 0;
+
+		final Team poiTeam = AA_TeamManager.getTeam(pov);
 		int totalEnemies = 0;
 		if (isTeamPlayModeActive()) {
 			for (Team t: getTeams()) {
-				if (!t.equals(team)) {
+				if (!t.equals(poiTeam)) {
 					totalEnemies += t.getSize();
 				}
 			}
 		}
 		else {
-			totalEnemies = getNumberOfPlayersRemaining();
+			totalEnemies = getNumberOfPlayersRemaining() - 1;
 		}
 		return totalEnemies;
 	}
-
 
 
 	public boolean isTeamPlayModeActive() {

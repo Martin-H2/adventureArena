@@ -67,7 +67,7 @@ public class AA_Events implements Listener {
 	@EventHandler
 	public void onPlayerJoin(final PlayerJoinEvent event) {
 		if (AA_MiniGameControl.isInMgHubAABB(event.getPlayer().getLocation())) {
-			AA_MiniGameControl.kickIfPlayingMiniGame(event.getPlayer());
+			AA_MiniGameControl.kickIfInsideMiniGame(event.getPlayer());
 			AA_MiniGameControl.leaveMiniGameHub(event.getPlayer(), null);
 		}
 	}
@@ -97,11 +97,11 @@ public class AA_Events implements Listener {
 			}
 			else if (AA_MiniGameControl.isPlayingMiniGame(attackedPlayer) && e.getDamager() instanceof Player) {
 				Player attackingPlayer = (Player) e.getDamager();
-				AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(attackedPlayer); //TODO !TEST
+				AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(attackedPlayer);
 				if (AA_TeamManager.isAllied(attackedPlayer, attackingPlayer)) {
 					e.setCancelled(true);
 				}
-				else if (!mg.isPvpDamage()) {
+				else if (!mg.isPvpDamageEnabled()) {
 					if (e.getCause() == DamageCause.PROJECTILE) {
 						e.setDamage(0); //allow pushback only for projectiles
 					}
@@ -210,7 +210,7 @@ public class AA_Events implements Listener {
 
 	@EventHandler
 	public void onPlayerTeleport(final PlayerTeleportEvent e) {
-		if ((AA_MiniGameControl.isPlayingMiniGame(e.getPlayer()) || AA_MiniGameControl.isEditingMiniGame(e.getPlayer())) //TODO !test
+		if ((AA_MiniGameControl.isPlayingMiniGame(e.getPlayer()) || AA_MiniGameControl.isEditingMiniGame(e.getPlayer()))
 			&& !AA_MiniGameControl.getMiniGameForPlayer(e.getPlayer()).isInsideBounds(e.getTo())) {
 			e.setCancelled(true);
 		}
