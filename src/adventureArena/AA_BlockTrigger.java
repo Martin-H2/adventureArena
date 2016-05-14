@@ -1,15 +1,15 @@
 package adventureArena;
 
 import java.util.*;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
-import org.bukkit.entity.*;
-import org.bukkit.inventory.EntityEquipment;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
+import adventureArena.tasks.AA_PeriodicalTask;
+import adventureArena.tasks.PeriodicalEntityTask;
+import adventureArena.tasks.TimedBlockTask;
 
 
 public class AA_BlockTrigger implements ConfigurationSerializable {
@@ -21,6 +21,7 @@ public class AA_BlockTrigger implements ConfigurationSerializable {
 
 	//#### OPTIONAL ####
 	private EntityType			entityType			= EntityType.UNKNOWN;
+	private Material			blockType			= Material.AIR;
 	private int					newScore			= -1;
 	private double				delay				= 0;
 	private double				delayRndRange		= 0;
@@ -47,6 +48,15 @@ public class AA_BlockTrigger implements ConfigurationSerializable {
 		this.entityType = entityType;
 	}
 
+	public AA_BlockTrigger(final Vector signPosition, final Vector attachedBlockPosition, final boolean isSpawnTrigger, final double radius, final Material blockType) {
+		super();
+		this.signPosition = signPosition;
+		this.attachedBlockPosition = attachedBlockPosition;
+		this.isSpawnTrigger = isSpawnTrigger;
+		this.radius = radius;
+		this.blockType = blockType;
+	}
+
 	public AA_BlockTrigger(final Vector signPosition, final Vector attachedBlockPosition, final boolean isSpawnTrigger, final double radius, final int newScore) {
 		super();
 		this.signPosition = signPosition;
@@ -62,6 +72,9 @@ public class AA_BlockTrigger implements ConfigurationSerializable {
 		isSpawnTrigger = (boolean) serializedForm.get("isSpawnTrigger");
 		radius = (double) serializedForm.get("radius");
 		entityType = EntityType.valueOf((String) serializedForm.get("entityType"));
+		if (serializedForm.containsKey("blockType")) {
+			blockType = Material.valueOf((String) serializedForm.get("blockType"));
+		}
 		delay = (double) serializedForm.get("delay");
 		delayRndRange = (double) serializedForm.get("delayRndRange");
 		hp = (double) serializedForm.get("hp");
@@ -84,6 +97,7 @@ public class AA_BlockTrigger implements ConfigurationSerializable {
 		serializedForm.put("isSpawnTrigger", isSpawnTrigger);
 		serializedForm.put("radius", radius);
 		serializedForm.put("entityType", entityType.toString());
+		serializedForm.put("blockType", blockType.toString());
 		serializedForm.put("delay", delay);
 		serializedForm.put("delayRndRange", delayRndRange);
 		serializedForm.put("hp", hp);
@@ -135,73 +149,32 @@ public class AA_BlockTrigger implements ConfigurationSerializable {
 
 	private void triggerSpawn(final World w, final AA_MiniGame mg) {
 		hasGlobalCd = true;
-		final Location airBlockAboveAttachedBlockTelePos = AA_TerrainHelper.getAirBlockAboveGroundTelePos(attachedBlockPosition.toLocation(w), true);
 
-		AA_SelfCancelingTask spawnTask = new AA_SelfCancelingTask() {
-
-			@Override
-			public void tick() {
-				final Entity entity = w.spawnEntity(airBlockAboveAttachedBlockTelePos, entityType);
-				if (entity instanceof Creature && hp > 0) {
-					Creature creature = (Creature) entity;
-					creature.setMaxHealth(hp);
-					creature.setHealth(hp);
-					creature.setTarget(mg.getRandomPlayer());
-					if (explodeOnDeath) {
-						EntityEquipment ee = creature.getEquipment();
-						ee.setHelmet(new ItemStack(Material.PUMPKIN));
-					}
-				}
-				if (lifeTime > 0) {
-					entity.setCustomNameVisible(true);
-					AA_SelfCancelingTask explosionTimerTask = new AA_SelfCancelingTask() {
-
-						@Override
-						public void tick() {
-							if (explodeOnDeath) {
-								ChatColor cc = getNumberOfExecutionsLeft() < 3 ? ChatColor.RED : ChatColor.BLUE;
-								entity.setCustomName(cc.toString() + getNumberOfExecutionsLeft());
-								//AA_MessageSystem.consoleDebug("EXPLODE: " + cc.toString() + getNumberOfExecutionsLeft());
-							}
-						}
-
-						@Override
-						public void lastTick() {
-							if (entity.isValid()) {
-								if (explodeOnDeath) {
-									float power = 4;
-									if (entity instanceof LivingEntity) {
-										LivingEntity monster = (LivingEntity) entity;
-										power *= (float) (monster.getHealth() / monster.getMaxHealth());
-									}
-									entity.setCustomName("Exploding " + entity.getName());
-									entity.getWorld().createExplosion(entity.getLocation(), power);
-								}
-								entity.remove();
-							}
-						}
-					};
-
-					explosionTimerTask.schedule(0, 1, (int) Math.round(lifeTime) + 1);
-					runningTasks.add(explosionTimerTask.getTaskId());
-				}
+		if (blockType == Material.AIR) {
+			// SPAWN ENTITIES
+			AA_PeriodicalTask spawnTask = new PeriodicalEntityTask(w, attachedBlockPosition, entityType, hp, explodeOnDeath, lifeTime, mg, runningTasks);
+			if (delay <= 0 && count == 1) {
+				spawnTask.lastTick();
 			}
-
-			@Override
-			public void lastTick() {
-				tick();
+			else {
+				int finalCount = count * (isPerPlayerCount ? mg.getNumberOfPlayersRemaining() : 1);
+				spawnTask.schedule(delay + rnd.nextDouble() * delayRndRange, 1.0, finalCount);
+				runningTasks.add(spawnTask.getTaskId());
 			}
-		};
-
-
-		if (delay == 0 && count == 1) {
-			spawnTask.tick();
 		}
 		else {
-			int finalCount = count * (isPerPlayerCount ? mg.getNumberOfPlayersRemaining() : 1);
-			spawnTask.schedule(delay + rnd.nextDouble() * delayRndRange, 1, finalCount);
-			runningTasks.add(spawnTask.getTaskId());
+			// SPAWN BLOCKS
+			Runnable spawnTask = new TimedBlockTask(w, attachedBlockPosition, blockType, hp, explodeOnDeath, lifeTime, mg, runningTasks, count);
+			if (delay <= 0) {
+				spawnTask.run();
+			}
+			else {
+				runningTasks.add(AdventureArena.executeDelayed(delay, spawnTask));
+			}
 		}
+
+
+
 	}
 
 	private boolean isInside(final Vector v) {

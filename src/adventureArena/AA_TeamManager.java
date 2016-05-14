@@ -136,7 +136,7 @@ public class AA_TeamManager {
 			}
 		}
 
-		for (AA_BlockTrigger mt: miniGame.getStartMonsterTriggers()) {
+		for (AA_BlockTrigger mt: miniGame.getStartMonsterTriggers()) {//TODO only 1 time exec ?
 			mt.checkAndTrigger(miniGame.getWorld(), miniGame);
 		}
 

@@ -45,6 +45,7 @@ public class AA_MiniGame {
 	private boolean							isOver					= false;
 	List<Player>							activePlayers			= new ArrayList<Player>();
 	private Location						spectatorRespawnPoint	= null;
+	private Vector							playableAreaMidpoint;
 
 
 
@@ -449,10 +450,17 @@ public class AA_MiniGame {
 
 	//################## UTIL ######################
 
-	boolean isInsideBounds(final Location loc) {
+	public boolean isInsideBounds(final Location loc) {
+		if (getSouthEastMax() == null || getNorthWestMin() == null) return false;
+		return getSouthEastMax().getX() + 1 >= loc.getX() && getNorthWestMin().getX() <= loc.getX() // +1 due to block coords floor function
+			&& getSouthEastMax().getY() + 1 >= loc.getY() && getNorthWestMin().getY() <= loc.getY()
+			&& getSouthEastMax().getZ() + 1 >= loc.getZ() && getNorthWestMin().getZ() <= loc.getZ();
+	}
+
+	public boolean isInsidePlayableBounds(final Location loc) {
 		if (getSouthEastMax() == null || getNorthWestMin() == null) return false;
 		return getSouthEastMax().getX() + 1 >= loc.getX() && getNorthWestMin().getX() <= loc.getX()
-			&& getSouthEastMax().getY() + 1 >= loc.getY() && getNorthWestMin().getY() <= loc.getY()
+			&& getSouthEastMax().getY() + 1 - 3 >= loc.getY() && getNorthWestMin().getY() <= loc.getY()
 			&& getSouthEastMax().getZ() + 1 >= loc.getZ() && getNorthWestMin().getZ() <= loc.getZ();
 	}
 
@@ -663,7 +671,7 @@ public class AA_MiniGame {
 	}
 
 
-	public void roomReset() {
+	public void resetRoom() {
 		name = "newMiniGame";
 		king = null;
 		pvpDamage = false;
@@ -680,6 +688,13 @@ public class AA_MiniGame {
 		persist();
 		AA_TerrainHelper.resetMiniGameRoom(this);
 		doEnvironmentBackup();
+	}
+
+	public Vector getPlayableAreaMidpoint() {
+		if (playableAreaMidpoint == null) {
+			playableAreaMidpoint = getSouthEastMax().getMidpoint(getNorthWestMin());
+		}
+		return playableAreaMidpoint;
 	}
 
 

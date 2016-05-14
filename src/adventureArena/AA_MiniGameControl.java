@@ -115,7 +115,7 @@ public class AA_MiniGameControl {
 		return location.toVector().isInAABB(MINIGAME_HUB_MIN, MINIGAME_HUB_MAX);
 	}
 
-	public static void rebuildMiniGameCfg(final String worldName) {
+	public static void rebuildMiniGameCfg(final String worldName) { //TODO cache allowed Editors
 		final World world = Bukkit.getWorld(worldName);
 		if (world == null) {
 			AA_MessageSystem.consoleError("world not found: " + worldName);
@@ -244,7 +244,7 @@ public class AA_MiniGameControl {
 			}
 			Block target = AA_TerrainHelper.getAirBlockAboveGround(player.getLocation().getBlock().getRelative(BlockFace.DOWN, 3), false);
 			player.setBedSpawnLocation(miniGame.getSpectatorRespawnPoint(), true);
-			teleportSafe(player, target);
+			teleportSafe(player, target, miniGame.getPlayableAreaMidpoint());
 			player.setGameMode(GameMode.CREATIVE);
 			AA_InventorySaver.restoreInventoryAndPlayerMeta(player, AA_ConfigPaths.savedCreativeData);
 			player.setLevel(0);
@@ -338,7 +338,7 @@ public class AA_MiniGameControl {
 		setNeutralPlayerState(p);
 		p.setGameMode(MINIGAME_HUB_GAMEMODE);
 		p.setBedSpawnLocation(miniGame.getSpectatorRespawnPoint(), true);
-		teleportSafe(p, AA_TerrainHelper.getAirBlockAboveGround(vector.toLocation(p.getWorld()), true));
+		teleportSafe(p, AA_TerrainHelper.getAirBlockAboveGround(vector.toLocation(p.getWorld()), true), miniGame.getPlayableAreaMidpoint());
 		setPlayerState(p, PlayerState.IS_PLAYING, miniGame);
 		miniGame.addPlayer(teamName, p);
 		for (ItemStack item: miniGame.getSpawnEquip()) {
@@ -481,8 +481,8 @@ public class AA_MiniGameControl {
 		player.teleport(target);
 	}
 
-	public static void teleportSafe(final Player player, final Block target) {
-		player.teleport(target.getLocation().add(0.5, 0.0, 0.5));
+	public static void teleportSafe(final Player player, final Block target, Vector viewTarget) {
+		player.teleport(target.getLocation().add(0.5, 0.0, 0.5).setDirection(viewTarget));
 	}
 
 
@@ -570,7 +570,7 @@ public class AA_MiniGameControl {
 		AA_MiniGame mg = getMiniGameContainingLocation(player.getLocation());
 		if (mg != null) {
 			surroundingMiniGameSessionWipe(player);
-			mg.roomReset();
+			mg.resetRoom();
 			AA_ScoreManager.surroundingMiniGameScoreReset(player);
 		}
 		else {

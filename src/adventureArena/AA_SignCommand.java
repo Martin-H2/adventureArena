@@ -19,6 +19,9 @@ public class AA_SignCommand {
 	private static final String					ENCHANT_IDS_HELP			= ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "http://minecraft.gamepedia.com/Enchanting";
 	private static final String					MATERIAL_IDS_HELP			= ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html";
 	private static final String					ENTITY_IDS_HELP				= ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "hub.spigotmc.org/javadocs/bukkit/org/bukkit/entity/EntityType.html";
+	private static final String					WIKI_HELP					= ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "http://goo.gl/Hil90h";
+
+
 	private static final double					PLAYER_COMMAND_DELAY_SEC	= 1.0;
 	private static final String					DELIM_MINUS					= "(-)|(- )|( - )|( -)";
 	private static final String					DELIM_KOMMA					= "(,)|(, )|( , )|( ,)";
@@ -199,6 +202,7 @@ public class AA_SignCommand {
 	public boolean executeOnCreation(final Player optionalCreator, final World world) {
 		if (!commands.contains(command)) {
 			failAndBreak(optionalCreator, "Unknown command: " + highlightColor() + command + errorColor() + ", possible is: " + ultraHighlightColor() + commands.toString());
+			failAndBreak(optionalCreator, "see documentation: " + WIKI_HELP);
 			return false;
 		}
 
@@ -289,6 +293,7 @@ public class AA_SignCommand {
 		else if (command.equals("spawnEquip")) {
 			if (parameterMap.size() == 0) {
 				failAndBreak(optionalCreator, "No item specified");
+				failAndBreak(optionalCreator, "see documentation: " + WIKI_HELP);
 			}
 
 			int lineIndex = 0;
@@ -306,6 +311,7 @@ public class AA_SignCommand {
 					if (itemMaterial == null) {
 						failAndBreak(optionalCreator, "1st line needs to be an " + ultraHighlightColor() + "ItemId:amount" + errorColor() + "pair");
 						failAndBreak(optionalCreator, "Unknown item ID: " + highlightColor() + itemName + errorColor() + ", see all IDs here: " + MATERIAL_IDS_HELP);
+						failAndBreak(optionalCreator, "see documentation: " + WIKI_HELP);
 					}
 					if (validateIntParamater(optionalCreator, itemName, 1, 64)) {
 						amount = Integer.parseInt(entry.getValue());
@@ -317,12 +323,14 @@ public class AA_SignCommand {
 					targetMaterial = AA_Util.getEnumStartingWith(itemName, Material.class);
 					if (targetMaterial == null) {
 						failAndBreak(optionalCreator, "Unknown item ID: " + highlightColor() + itemName + errorColor() + ", see all IDs here: " + MATERIAL_IDS_HELP);
+						failAndBreak(optionalCreator, "see documentation: " + WIKI_HELP);
 					}
 				}
 				if (entry.getKey().equals("ench")) {
 					String[] enchVal = entry.getValue().split(" ");
 					if (enchVal.length < 1 || enchVal.length > 2) {
 						failAndBreak(optionalCreator, "Enchant line must be: " + ultraHighlightColor() + "ench:EnchId lvl" + errorColor() + ", see all IDs here: " + ENCHANT_IDS_HELP);
+						failAndBreak(optionalCreator, "see documentation: " + WIKI_HELP);
 					}
 					else {
 						String enchName = enchVal[0];
@@ -334,6 +342,7 @@ public class AA_SignCommand {
 						}
 						if (ench == null) {
 							failAndBreak(optionalCreator, "Unknown enchant ID: " + highlightColor() + enchName + errorColor() + ", see all IDs here: " + ENCHANT_IDS_HELP);
+							failAndBreak(optionalCreator, "see documentation: " + WIKI_HELP);
 						}
 						try {
 							enchLevel = Integer.parseInt(enchVal[1]);
@@ -380,6 +389,7 @@ public class AA_SignCommand {
 		else if (command.equals("@distance") || command.equals("@start")) {
 			if (command.equals("@distance") && !parameterMap.containsKey("radius")) {
 				failAndBreak(optionalCreator, "Missing radius. Example: " + ultraHighlightColor() + "[@distance:5]");
+				failAndBreak(optionalCreator, "see documentation: " + WIKI_HELP);
 				return false;
 			}
 			try {
@@ -427,19 +437,28 @@ public class AA_SignCommand {
 						count = Integer.parseInt(countAndFlag);
 						parameterMap.remove("count");
 					}
-					for (String monsterName: parameterMap.keySet()) {
-						EntityType entityType = AA_Util.getEnumStartingWith(monsterName, EntityType.class);
-						if (entityType == null) {
-							failAndBreak(optionalCreator, "Unknown entity ID: " + highlightColor() + monsterName + errorColor() + ", see all IDs here: " + ENTITY_IDS_HELP);
-							throw new Exception();
+					for (String spawnedObject: parameterMap.keySet()) {
+						EntityType entityType = AA_Util.getEnumStartingWith(spawnedObject, EntityType.class);
+						Material blockType = AA_Util.getEnumStartingWith(spawnedObject, Material.class);
+						if (entityType == null && blockType == null) {
+							failAndBreak(optionalCreator, "Unknown entity/block name: " + highlightColor() + spawnedObject + errorColor() + ", see all entity names here: " + ENTITY_IDS_HELP);
+							failAndBreak(optionalCreator, "and block names here: " + MATERIAL_IDS_HELP + " (both is possible, prefix suffices");
+							failAndBreak(optionalCreator, "see documentation: " + WIKI_HELP);
+							return false;
 						}
-						String[] hpLifeTime = parameterMap.get(monsterName).split(DELIM_KOMMA);
+						String[] hpLifeTime = parameterMap.get(spawnedObject).split(DELIM_KOMMA);
 						double hp = Double.parseDouble(hpLifeTime[0]);
 						double lifeTime = -1;
 						if (hpLifeTime.length == 2) {
 							lifeTime = Double.parseDouble(hpLifeTime[1]);
 						}
-						AA_BlockTrigger mt = new AA_BlockTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, entityType);
+						AA_BlockTrigger mt;
+						if (entityType != null) {
+							mt = new AA_BlockTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, entityType);
+						}
+						else {
+							mt = new AA_BlockTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, blockType);
+						}
 						mt.setDelay(delay);
 						mt.setDelayRndRange(delayRngRange);
 						mt.setHp(hp);
@@ -452,14 +471,15 @@ public class AA_SignCommand {
 				}
 			}
 			catch (Exception e) {
-				failAndBreak(optionalCreator, "Wrong format.");
+				failAndBreak(optionalCreator, "see documentation: " + WIKI_HELP);
 				if (optionalCreator != null) {
 					AA_MessageSystem.example("  [" + (command.equals("@distance") ? "@distance:5" : "@start") + "]", optionalCreator);
 					AA_MessageSystem.example(" delay:3-7   " + ChatColor.DARK_GRAY + "(optional)", optionalCreator);
 					AA_MessageSystem.example(" zombie:100,10   (or setScore:75)", optionalCreator);
 					AA_MessageSystem.example(" explode:1", optionalCreator);
 					AA_MessageSystem.sideNote("where 100=hp and 10=lifeTime", optionalCreator);
-					AA_MessageSystem.sideNote("Entity IDs here: " + ENTITY_IDS_HELP, optionalCreator);
+					AA_MessageSystem.sideNote("Entity names here: " + ENTITY_IDS_HELP, optionalCreator);
+					AA_MessageSystem.sideNote("Block names here: " + MATERIAL_IDS_HELP, optionalCreator);
 				}
 				//e.printStackTrace();
 				return false;
@@ -661,6 +681,11 @@ public class AA_SignCommand {
 	public static boolean isBorderCommandSign(Block block) {
 		AA_SignCommand sc = createFrom(block);
 		return sc != null && sc.getCommand().equals("border");
+	}
+
+	public static boolean isClickCommandSign(Block block) {
+		AA_SignCommand sc = createFrom(block);
+		return sc != null && sc.isClickCommand();
 	}
 
 

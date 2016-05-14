@@ -21,11 +21,11 @@ public class AA_TerrainHelper {
 
 
 
-	static Location getAirBlockAboveGroundTelePos(final Location start, final boolean searchUpwards) {
+	public static Location getAirBlockAboveGroundTelePos(final Location start, final boolean searchUpwards) {
 		return getAirBlockAboveGround(start.getBlock(), searchUpwards).getLocation().add(0.5, 0, 0.5);
 	}
 
-	static Block getAirBlockAboveGround(final Location start, final boolean searchUpwards) {
+	public static Block getAirBlockAboveGround(final Location start, final boolean searchUpwards) {
 		return getAirBlockAboveGround(start.getBlock(), searchUpwards);
 	}
 
@@ -151,7 +151,7 @@ public class AA_TerrainHelper {
 		Block block;
 		World world = mg.getWorld();
 		for (int x = mg.getNorthWestMin().getBlockX(); x <= mg.getSouthEastMax().getBlockX(); x++) {
-			for (int y = mg.getNorthWestMin().getBlockY(); y <= mg.getSouthEastMax().getBlockY() - 2; y++) {
+			for (int y = mg.getNorthWestMin().getBlockY(); y <= mg.getSouthEastMax().getBlockY() - 3; y++) {
 				for (int z = mg.getNorthWestMin().getBlockZ(); z <= mg.getSouthEastMax().getBlockZ(); z++) {
 					block = world.getBlockAt(x, y, z);
 					if (!AA_SignCommand.isBorderCommandSign(block) && !isUndestroyableArenaBorder(block)

@@ -1,8 +1,9 @@
-package adventureArena;
+package adventureArena.tasks;
 
 import org.bukkit.scheduler.BukkitRunnable;
+import adventureArena.AdventureArena;
 
-public abstract class AA_SelfCancelingTask extends BukkitRunnable {
+public abstract class AA_PeriodicalTask extends BukkitRunnable {
 
 	private int numberOfExecutionsLeft;
 
