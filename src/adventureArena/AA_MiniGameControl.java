@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -39,7 +40,7 @@ public class AA_MiniGameControl {
 		return miniGames;
 	}
 
-
+	static Random	rnd	= new Random();
 
 	// ################ MINIGAME HUB ##################
 
@@ -54,13 +55,14 @@ public class AA_MiniGameControl {
 				player.setExp(0);
 				config.set(AA_ConfigPaths.isInMiniGameHub + "." + player.getName(), true);
 				savePluginConfig();
-				setMiniGameSpectator(player, false, target);
+				setMiniGameSpectator(player, false, target, true);
 				player.setBedSpawnLocation(target, true);
+				AA_MessageSystem.sideNote("MiniGames documentation @forum: " + AA_SignCommand.WIKI_HELP, player);
 			}
 		}
 	}
 
-	public static void setMiniGameSpectator(final Player player, final boolean onDeath, Location optionalBackportLocation) {
+	public static void setMiniGameSpectator(final Player player, final boolean onDeath, Location optionalBackportLocation, boolean isHubJoin) {
 		setPlayerState(player, PlayerState.IS_WATCHING, null);
 		player.setGameMode(MINIGAME_HUB_GAMEMODE);
 		if (optionalBackportLocation == null) {
@@ -68,7 +70,7 @@ public class AA_MiniGameControl {
 		}
 		if (!onDeath) {
 			setNeutralPlayerState(player);
-			teleportSafe(player, optionalBackportLocation);
+			teleportSafeAndBounce(player, optionalBackportLocation, !isHubJoin);
 			//spectator buffs
 			player.addPotionEffect(PERMANENT_SPEED, true);
 			player.addPotionEffect(PERMANENT_SATURATION, true);
@@ -77,6 +79,7 @@ public class AA_MiniGameControl {
 	}
 
 	public static void leaveMiniGameHub(final Player player, Location target) {
+		kickIfInsideMiniGame(player);
 		FileConfiguration config = getPluginConfig();
 		if (target == null) {
 			target = player.getWorld().getSpawnLocation();
@@ -86,7 +89,7 @@ public class AA_MiniGameControl {
 		savePluginConfig();
 		player.setGameMode(Bukkit.getDefaultGameMode());
 		player.setBedSpawnLocation(target, true);
-		teleportSafe(player, target);
+		teleportSafeAndBounce(player, target, false);
 		AA_InventorySaver.restoreInventoryAndPlayerMeta(player, AA_ConfigPaths.savedPlayerData);
 	}
 
@@ -242,7 +245,7 @@ public class AA_MiniGameControl {
 			if (!miniGame.isInProgress() && !miniGame.isLockedByEditSession()) {
 				miniGame.restoreEnvironmentBackup();
 			}
-			Block target = AA_TerrainHelper.getAirBlockAboveGround(player.getLocation().getBlock().getRelative(BlockFace.DOWN, 3), false);
+			Block target = AA_TerrainHelper.getAirBlockAboveGround(player.getLocation().getBlock().getRelative(BlockFace.DOWN, 3), false, miniGame);
 			player.setBedSpawnLocation(miniGame.getSpectatorRespawnPoint(), true);
 			teleportSafe(player, target, miniGame.getPlayableAreaMidpoint());
 			player.setGameMode(GameMode.CREATIVE);
@@ -338,7 +341,7 @@ public class AA_MiniGameControl {
 		setNeutralPlayerState(p);
 		p.setGameMode(MINIGAME_HUB_GAMEMODE);
 		p.setBedSpawnLocation(miniGame.getSpectatorRespawnPoint(), true);
-		teleportSafe(p, AA_TerrainHelper.getAirBlockAboveGround(vector.toLocation(p.getWorld()), true), miniGame.getPlayableAreaMidpoint());
+		teleportSafe(p, AA_TerrainHelper.getAirBlockAboveGround(vector.toLocation(p.getWorld()), true, miniGame), miniGame.getPlayableAreaMidpoint());
 		setPlayerState(p, PlayerState.IS_PLAYING, miniGame);
 		miniGame.addPlayer(teamName, p);
 		for (ItemStack item: miniGame.getSpawnEquip()) {
@@ -381,34 +384,34 @@ public class AA_MiniGameControl {
 			AA_ScoreManager.onPlayerLeft(mg, player);
 			if (mg.isVictory()) {
 				mg.setOver();
-				AdventureArena.executeDelayed(0.1, new Runnable() {
+				AdventureArena.executeDelayed(5, new Runnable() {
 
 					@Override
 					public void run() {
-						win(mg);
-						mg.setInProgress(false);
-						mg.wipeEntities();
-						mg.wipePlaySession();
-						//AA_MessageSystem.sideNoteForGroup("All players left your " + mg.getName() + ". Rolling back environment...", mg.getAllowedEditors());
-						//mg.restoreEnvironmentBackup();
+						endMiniGame(mg);
 					}
 				});
 			}
 			AA_ScoreManager.updateHighScoreList(mg);
 		}
-		setMiniGameSpectator(player, onDeath, mg.getSpectatorRespawnPoint());
+		setMiniGameSpectator(player, onDeath, mg.getSpectatorRespawnPoint(), false);
 	}
 
-	private static void win(final AA_MiniGame mg) {
-		for (Player p: Bukkit.getOnlinePlayers()) {
-			AA_MiniGame playersMG = getMiniGameForPlayer(p);
-			if (mg.equals(playersMG) && isPlayingMiniGame(p)) {
-				if (!p.isDead()) { // dead players got removed anyway
-					AA_MessageSystem.success("You won " + mg.getName(), p);
+
+	private static void endMiniGame(final AA_MiniGame mg) {
+		for (Player p: mg.getPlayersInArea()) {
+			if (!p.isDead()) {
+				if (isPlayingMiniGame(p)) {
+					//AA_MessageSystem.success("You won " + mg.getName(), p);
+					AA_OnScreenMessages.sendGameWonMessage(mg, p);
 					AA_ScoreManager.onPlayerWin(mg, p);
 					mg.removePlayer(p);
-					setMiniGameSpectator(p, false, mg.getSpectatorRespawnPoint());
+					setMiniGameSpectator(p, false, mg.getSpectatorRespawnPoint(), false);
 				}
+			}
+			else {
+				// dead players got removed anyway
+				p.spigot().respawn();
 			}
 		}
 		AdventureArena.executeDelayed(0.2, new Runnable() {
@@ -418,6 +421,11 @@ public class AA_MiniGameControl {
 				AA_ScoreManager.updateHighScoreList(mg);
 			}
 		});
+		mg.setInProgress(false);
+		mg.wipeEntities();
+		mg.wipePlaySession();
+		//AA_MessageSystem.sideNoteForGroup("All players left your " + mg.getName() + ". Rolling back environment...", mg.getAllowedEditors());
+		mg.restoreEnvironmentBackup();
 	}
 
 
@@ -475,10 +483,13 @@ public class AA_MiniGameControl {
 		player.updateInventory();
 	}
 
-	public static void teleportSafe(final Player player, Location target) {
+	public static void teleportSafeAndBounce(final Player player, Location target, boolean bounce) {
 		target = target.clone();
 		target.add(0.5, 0.0, 0.5);
 		player.teleport(target);
+		if (bounce) {
+			player.setVelocity(new Vector(rnd.nextDouble() * 2.0 - 1.0, 0, rnd.nextDouble() * 2.0 - 1.0));
+		}
 	}
 
 	public static void teleportSafe(final Player player, final Block target, Vector viewTarget) {
@@ -558,6 +569,9 @@ public class AA_MiniGameControl {
 
 
 	public static void kickFromMiniGameAndHub(Player p) {
+		if (p.isDead()) {
+			p.spigot().respawn();
+		}
 		kickIfInsideMiniGame(p);
 		if (isInMiniGameHub(p)) {
 			leaveMiniGameHub(p, null);

@@ -19,7 +19,7 @@ public class AA_SignCommand {
 	private static final String					ENCHANT_IDS_HELP			= ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "http://minecraft.gamepedia.com/Enchanting";
 	private static final String					MATERIAL_IDS_HELP			= ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html";
 	private static final String					ENTITY_IDS_HELP				= ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "hub.spigotmc.org/javadocs/bukkit/org/bukkit/entity/EntityType.html";
-	private static final String					WIKI_HELP					= ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "http://goo.gl/Hil90h";
+	public static final String					WIKI_HELP					= ChatColor.BLUE.toString() + ChatColor.UNDERLINE + "http://goo.gl/Hil90h";
 
 
 	private static final double					PLAYER_COMMAND_DELAY_SEC	= 1.0;

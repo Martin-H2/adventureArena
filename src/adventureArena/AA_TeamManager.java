@@ -22,6 +22,7 @@ public class AA_TeamManager {
 	// ################ SCOREBOAD TEAMS #########################
 
 
+	@SuppressWarnings ("deprecation")
 	public static Team getTeam(final OfflinePlayer p) {
 		if (p == null) return null;
 		return scoreBoard.getPlayerTeam(p);

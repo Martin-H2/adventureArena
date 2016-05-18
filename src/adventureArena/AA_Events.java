@@ -1,11 +1,14 @@
 package adventureArena;
 
 import java.util.*;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -20,13 +23,13 @@ import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.world.PortalCreateEvent;
+import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.util.BlockVector;
 
 @SuppressWarnings ("deprecation")
 public class AA_Events implements Listener {
 
-	static Map<Player, BlockVector>	currentPlayerBlockPos	= new HashMap<Player, BlockVector>();
-
+	static Map<UUID, BlockVector>	currentPlayerBlockPos	= new HashMap<UUID, BlockVector>();
 
 	private static HashSet<Byte>	transparent				= new HashSet<Byte>();
 	static {
@@ -38,12 +41,11 @@ public class AA_Events implements Listener {
 	@EventHandler
 	public void onPlayerMove(final PlayerMoveEvent e) {
 		BlockVector newPosRounded = e.getTo().toVector().toBlockVector();
-		if (newPosRounded.equals(currentPlayerBlockPos.get(e.getPlayer()))) return;
+		if (newPosRounded.equals(currentPlayerBlockPos.get(e.getPlayer().getUniqueId()))) return;
 		else {
-			currentPlayerBlockPos.put(e.getPlayer(), newPosRounded);
+			currentPlayerBlockPos.put(e.getPlayer().getUniqueId(), newPosRounded);
 			onBlockEnter(e.getPlayer(), newPosRounded, e.getTo().getBlock());
 		}
-
 		//		Location target = e.getTo();
 		//
 		//		int simpleHash = target.getBlockX()+target.getBlockY()*100+target.getBlockX()*10000;
@@ -62,14 +64,22 @@ public class AA_Events implements Listener {
 		}
 	}
 
-
-
 	@EventHandler
 	public void onPlayerJoin(final PlayerJoinEvent event) {
 		if (AA_MiniGameControl.isInMgHubAABB(event.getPlayer().getLocation())) {
 			AA_MiniGameControl.kickIfInsideMiniGame(event.getPlayer());
 			AA_MiniGameControl.leaveMiniGameHub(event.getPlayer(), null);
 		}
+	}
+
+	@EventHandler
+	public void onPlayerQuit(final PlayerQuitEvent e) {
+		AA_MiniGameControl.kickFromMiniGameAndHub(e.getPlayer());
+	}
+
+	@EventHandler
+	public void onPlayerKick(final PlayerKickEvent e) {
+		AA_MiniGameControl.kickFromMiniGameAndHub(e.getPlayer());
 	}
 
 
@@ -89,24 +99,27 @@ public class AA_Events implements Listener {
 	//	}
 
 	@EventHandler
-	public void onEntityDamageByEntity(final EntityDamageByEntityEvent e) {
-		if (e.getEntity() instanceof Player) {
-			Player attackedPlayer = (Player) e.getEntity();
-			if (AA_MiniGameControl.isWatchingMiniGames(attackedPlayer)) {
-				e.setCancelled(true);
-			}
-			else if (AA_MiniGameControl.isPlayingMiniGame(attackedPlayer) && e.getDamager() instanceof Player) {
-				Player attackingPlayer = (Player) e.getDamager();
-				AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(attackedPlayer);
-				if (AA_TeamManager.isAllied(attackedPlayer, attackingPlayer)) {
-					e.setCancelled(true);
-				}
-				else if (!mg.isPvpDamageEnabled()) {
-					if (e.getCause() == DamageCause.PROJECTILE) {
-						e.setDamage(0); //allow pushback only for projectiles
+	public void onEntityDamageByEntity(final EntityDamageByEntityEvent event) {
+		if (event.getEntity() instanceof Player) {
+			Player victim = (Player) event.getEntity();
+			if (AA_MiniGameControl.isPlayingMiniGame(victim)) {
+				Player attacker = getAttackingPlayerOverProjectile(event.getDamager());
+				if (attacker != null) {
+					AA_MiniGame miniGame = AA_MiniGameControl.getMiniGameForPlayer(victim);
+					if (AA_TeamManager.isAllied(victim, attacker)) {
+						event.setCancelled(true);
+					}
+					else if (miniGame.isPvp()) {
+						AA_OnScreenMessages.sendPvpHitMessage(victim, attacker, event);
 					}
 					else {
-						e.setCancelled(true);
+						// e.g. Spleef
+						if (event.getCause() == DamageCause.PROJECTILE) {
+							event.setDamage(0); //allow pushback only for projectiles
+						}
+						else {
+							event.setCancelled(true);
+						}
 					}
 				}
 			}
@@ -116,13 +129,55 @@ public class AA_Events implements Listener {
 	@EventHandler
 	public void onEntityDamage(final EntityDamageEvent e) {
 		if (e.getEntity() instanceof Player) {
-			Player p = (Player) e.getEntity();
-			AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(p);
-			if (AA_MiniGameControl.isPlayingMiniGame(p) && mg != null && mg.isOver()) {
+			Player victim = (Player) e.getEntity();
+			if (AA_MiniGameControl.isWatchingMiniGames(victim)) {
 				e.setCancelled(true);
+			}
+			else if (AA_MiniGameControl.isPlayingMiniGame(victim)) {
+				AA_MiniGame miniGame = AA_MiniGameControl.getMiniGameForPlayer(victim);
+				if (miniGame.isOver()) {
+					e.setCancelled(true);
+				}
+				else {
+					//AA_OnScreenHitMessages.pvpHitMessage(victim, null, e); //TODO ?
+				}
 			}
 		}
 	}
+
+	//	@EventHandler
+	//	public void onPotionSplash(final PotionSplashEvent e) {
+	//		if (e.getEntity().getShooter() instanceof Player) {
+	//			for (LivingEntity victim: e.getAffectedEntities()) {
+	//				if (victim instanceof Player) {
+	//					onPlayerDamagesPlayer((Player) e.getEntity().getShooter(), (Player) victim);
+	//				}
+	//			}
+	//		}
+	//	}
+	//
+	//	@EventHandler
+	//	public void onAreaEffectCloudApply(final AreaEffectCloudApplyEvent e) {
+	//		if (e.getEntity().getSource() instanceof Player) {
+	//			for (LivingEntity victim: e.getAffectedEntities()) {
+	//				if (victim instanceof Player) {
+	//					onPlayerDamagesPlayer((Player) e.getEntity().getSource(), (Player) victim);
+	//				}
+	//			}
+	//		}
+	//	}
+
+	//	@EventHandler
+	//	public void onEntityCombustByEntity(EntityCombustByEntityEvent e) {
+	//		if (e.getEntity() instanceof Player && e.getCombuster() instanceof Player) {
+	//			onPlayerDamagesPlayer((Player) e.getCombuster(), (Player) e.getEntity());
+	//		}
+	//	}
+	//
+	//	private void onPlayerDamagesPlayer(Player attacker, Player victim) {
+	//
+	//
+	//	}
 
 	//	@EventHandler
 	//	public void onItemSpawn(final ItemSpawnEvent e) {
@@ -154,6 +209,10 @@ public class AA_Events implements Listener {
 			AA_ScoreManager.onPlayerDeath(event.getEntity());
 			AA_MiniGameControl.leaveCurrentMiniGame(player, true);
 		}
+		else if (AA_MiniGameControl.isEditingMiniGame(player)) {
+			event.setKeepLevel(true);
+			AA_MiniGameControl.leaveCurrentMiniGame(player, true);
+		}
 		else {
 			event.setKeepLevel(false);
 		}
@@ -169,25 +228,19 @@ public class AA_Events implements Listener {
 
 	@EventHandler
 	public void onPlayerRespawn(final PlayerRespawnEvent event) {
-		if (AA_MiniGameControl.isInMiniGameHub(event.getPlayer())) {
+		Player player = event.getPlayer();
+		if (AA_MiniGameControl.isInMiniGameHub(player)) {
 			AdventureArena.executeDelayed(0.2, new Runnable() {
 
 				@Override
 				public void run() {
-					AA_MiniGameControl.setMiniGameSpectator(event.getPlayer(), false, event.getPlayer().getBedSpawnLocation());
+					if (AA_MiniGameControl.isPlayingMiniGame(player)) {
+						AA_MiniGameControl.getMiniGameForPlayer(player).removePlayer(player);;
+					}
+					AA_MiniGameControl.setMiniGameSpectator(event.getPlayer(), false, event.getPlayer().getBedSpawnLocation(), false);
 				}
 			});
 		}
-	}
-
-	@EventHandler
-	public void onPlayerQuit(final PlayerQuitEvent e) {
-		AA_MiniGameControl.kickFromMiniGameAndHub(e.getPlayer());
-	}
-
-	@EventHandler
-	public void onPlayerKick(final PlayerKickEvent e) {
-		AA_MiniGameControl.kickFromMiniGameAndHub(e.getPlayer());
 	}
 
 
@@ -246,21 +299,6 @@ public class AA_Events implements Listener {
 	@EventHandler
 	public void onPlayerDropItem(final PlayerDropItemEvent event) {
 		antiCheatControl(event.getPlayer(), null, event);
-	}
-
-	private void antiCheatControl(final Player player, final Block block, final Cancellable c) {
-		if (player != null && player.getGameMode() == GameMode.CREATIVE && !player.isOp()) {
-			if (block != null && AA_TerrainHelper.isUndestroyableArenaBorder(block)) {
-				c.setCancelled(true);
-				AA_MessageSystem.sideNote("You can leave this area by right-clicking a sign labeled " + ChatColor.BLUE + "[exit]", player);
-			}
-			if (!AA_MiniGameControl.isPlayerInsideHisEditableArea(player)) {
-				c.setCancelled(true);
-				AA_MiniGameControl.leaveCurrentMiniGame(player, false);
-				AA_MessageSystem.sideNote("You escaped with CREATIVE somehow...", player);
-			}
-
-		}
 	}
 
 
@@ -372,6 +410,41 @@ public class AA_Events implements Listener {
 	//
 	//		}
 	//	}
+
+
+
+	// ############## UTIL FUNC ################
+
+	/**
+	 * Retracing attacking player
+	 *
+	 * @param event
+	 * @return The player who attacked (through a bow eg.) or null
+	 */
+	private Player getAttackingPlayerOverProjectile(Entity damager) {
+		if (damager instanceof Player) return (Player) damager;
+		if (damager instanceof Projectile) {
+			ProjectileSource shooter = ((Projectile) damager).getShooter();
+			if (shooter instanceof Player) return (Player) shooter;
+		}
+		return null;
+	}
+
+	private void antiCheatControl(final Player player, final Block block, final Cancellable c) {
+		if (player != null && player.getGameMode() == GameMode.CREATIVE && !player.isOp()) {
+			if (block != null && AA_TerrainHelper.isUndestroyableArenaBorder(block)) {
+				c.setCancelled(true);
+				AA_MessageSystem.sideNote("You can leave this area by right-clicking a sign labeled " + ChatColor.BLUE + "[exit]", player);
+			}
+			if (!AA_MiniGameControl.isPlayerInsideHisEditableArea(player)) {
+				c.setCancelled(true);
+				AA_MiniGameControl.kickFromMiniGameAndHub(player);
+				AA_MessageSystem.sideNote("You escaped with CREATIVE somehow...", player);
+				player.setGameMode(Bukkit.getDefaultGameMode());
+			}
+
+		}
+	}
 
 
 }

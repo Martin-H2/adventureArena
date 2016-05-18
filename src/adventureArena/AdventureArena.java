@@ -11,6 +11,8 @@ public class AdventureArena extends JavaPlugin {
 	private static AdventureArena	instance;
 	public static WorldEditPlugin	wep;
 
+	//	public static BountifulAPI		bfp;
+
 	@Override
 	public void onEnable() {
 		super.onEnable();
@@ -18,9 +20,12 @@ public class AdventureArena extends JavaPlugin {
 		if (wep == null) {
 			AA_MessageSystem.consoleError("can't find WorldEdit");
 		}
-		else {
-			//AA_MessageSystem.consoleInfo("found WorldEdit");
-		}
+
+		//		bfp = (BountifulAPI) getServer().getPluginManager().getPlugin("BountifulAPI"); //TODO what for ?
+		//		if (bfp == null) {
+		//			AA_MessageSystem.consoleError("can't find BountifulAPI");
+		//		}
+
 
 		ConfigurationSerialization.registerClass(AA_SpawnEquip.class);
 		ConfigurationSerialization.registerClass(AA_BlockTrigger.class);

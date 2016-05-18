@@ -32,12 +32,12 @@ public class PeriodicalEntityTask extends AA_PeriodicalTask {
 	public PeriodicalEntityTask(World w, Vector attachedBlockPosition, EntityType entityType, double hp, boolean explodeOnDeath, double lifeTime, AA_MiniGame mg, List<Integer> runningTasks) {
 		super();
 		world = w;
-		airBlockAboveAttachedBlockTelePos = AA_TerrainHelper.getAirBlockAboveGroundTelePos(attachedBlockPosition.toLocation(w), true);
+		airBlockAboveAttachedBlockTelePos = AA_TerrainHelper.getAirBlockAboveGroundTelePos(attachedBlockPosition.toLocation(w), true, mg);
 		this.entityType = entityType;
 		this.hp = hp;
 		this.explodeOnDeath = explodeOnDeath;
 		this.lifeTime = lifeTime;
-		this.miniGame = mg;
+		miniGame = mg;
 		this.runningTasks = runningTasks;
 	}
 

@@ -107,18 +107,7 @@ public class AA_ScoreManager {
 
 	private static List<Entry<String, Double>> getSortedHighscoreList(final AA_MiniGame mg) {
 		Map<String, Double> sortedHighscoreList = new HashMap<String, Double>();
-		ScoreType st = ScoreType.CMD_RATING;
-		if (mg.getScoreMode() == ScoreMode.KillsPerDeath) {
-			if (mg.isPvpDamageEnabled()) {
-				st = ScoreType.PVP_RATING;
-			}
-			else {
-				st = ScoreType.PVE_RATING;
-			}
-		}
-		else if (mg.getScoreMode() == ScoreMode.LastManStanding) {
-			st = ScoreType.LTS_RATING;
-		}
+		ScoreType st = mg.getScoreTypeForHighscore();
 		ConfigurationSection scores = getHighscoreConfig().getConfigurationSection(mg.getID() + "." + st.toString());
 		if (scores != null) {
 			for (String playerName: scores.getKeys(false)) {
@@ -152,7 +141,7 @@ public class AA_ScoreManager {
 		// DEATH
 		addScore(mg, ScoreType.DEATHS, dyingPlayer);
 
-		if (mg.isPvpDamageEnabled()) {
+		if (mg.isPvp()) {
 			// PVP
 			Player killer = dyingPlayer.getKiller();
 			if (killer == null && mg.getNumberOfEnemyPlayersRemaining(dyingPlayer) == 1) {
@@ -180,6 +169,7 @@ public class AA_ScoreManager {
 						victimRating, newVictimRating, killerRating, newKillerRating));
 				setScore(mg, ScoreType.PVP_RATING, killer, newKillerRating);
 				setScore(mg, ScoreType.PVP_RATING, dyingPlayer, newVictimRating);
+				AA_OnScreenMessages.sendPvpKillMessages(killer, dyingPlayer, killerRating, newKillerRating, victimRating, newVictimRating, mg);
 			}
 		}
 		else {
@@ -236,6 +226,10 @@ public class AA_ScoreManager {
 
 	private static double getScore(final AA_MiniGame mg, final ScoreType st, final Player p) {
 		return getScore(mg, st, p, 0.0);
+	}
+
+	public static double getHighScoreRating(final AA_MiniGame mg, final Player p) {
+		return getScore(mg, mg.getScoreTypeForHighscore(), p, 0.0);
 	}
 
 	private static void setScore(final AA_MiniGame mg, final ScoreType st, final Player p, final double newScore) {

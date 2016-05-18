@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
+import adventureArena.AA_ScoreManager.ScoreType;
 
 public class AA_MiniGame {
 
@@ -197,7 +198,7 @@ public class AA_MiniGame {
 		persist();
 	}
 
-	public boolean isPvpDamageEnabled() {
+	public boolean isPvp() {
 		return pvpDamage;
 	}
 
@@ -208,6 +209,22 @@ public class AA_MiniGame {
 
 	public ScoreMode getScoreMode() {
 		return scoreMode;
+	}
+
+	public ScoreType getScoreTypeForHighscore() {
+		ScoreType st = ScoreType.CMD_RATING;
+		if (getScoreMode() == ScoreMode.KillsPerDeath) {
+			if (isPvp()) {
+				st = ScoreType.PVP_RATING;
+			}
+			else {
+				st = ScoreType.PVE_RATING;
+			}
+		}
+		else if (getScoreMode() == ScoreMode.LastManStanding) {
+			st = ScoreType.LTS_RATING;
+		}
+		return st;
 	}
 
 	public void setScoreMode(final ScoreMode scoreMode) {
@@ -409,7 +426,7 @@ public class AA_MiniGame {
 	//################## Environment ######################
 
 	public boolean doEnvironmentBackup() {
-		AA_MessageSystem.sideNoteForGroup("Saving environment backup for '" + name + "' (id:" + id + ")", getPlayersInArea());
+		//AA_MessageSystem.sideNoteForGroup("Saving environment backup for '" + name + "' (id:" + id + ")", getPlayersInArea());
 		if (AA_TerrainHelper.saveMiniGameToSchematic(getNorthWestMin(), getSouthEastMax(), id, world)) {
 			needsEnvironmentBackup = false;
 			persist();
@@ -423,7 +440,7 @@ public class AA_MiniGame {
 	}
 
 	public boolean restoreEnvironmentBackup() {
-		AA_MessageSystem.sideNoteForGroup("Loading environment backup for '" + name + "' (id:" + id + ")", getPlayersInArea());
+		//AA_MessageSystem.sideNoteForGroup("Loading environment backup for '" + name + "' (id:" + id + ")", getPlayersInArea());
 		if (AA_TerrainHelper.loadMinigameFromSchematic(id, world)) {
 			needsEnvironmentBackup = false;
 			persist();
@@ -514,6 +531,7 @@ public class AA_MiniGame {
 	}
 
 
+	@SuppressWarnings ("deprecation")
 	void addPlayer(final String teamName, final Player p) {
 		activePlayers.add(p);
 		Team t = AA_TeamManager.getTeam(id + ":" + teamName, this);
@@ -527,6 +545,7 @@ public class AA_MiniGame {
 		}
 	}
 
+	@SuppressWarnings ("deprecation")
 	void removePlayer(final Player p) {
 		activePlayers.remove(p);
 		Team t = AA_TeamManager.getTeam(p);
@@ -577,7 +596,7 @@ public class AA_MiniGame {
 			AA_MessageSystem.consoleError("getNumberOfEnemiesRemaining: " + pov.getName() + " is not inside " + getName());
 			return 0;
 		}
-		if (!isPvpDamageEnabled()) return 0;
+		if (!isPvp()) return 0;
 
 		final Team poiTeam = AA_TeamManager.getTeam(pov);
 		int totalEnemies = 0;
@@ -648,10 +667,8 @@ public class AA_MiniGame {
 	public List<Player> getSpectators() {
 		List<Player> spectators = new ArrayList<Player>();
 		for (Player p: Bukkit.getOnlinePlayers()) {
-			if (AA_MiniGameControl.isWatchingMiniGames(p)) {
-				if (equals(AA_MiniGameControl.getMiniGameForPlayer(p))) {
-					spectators.add(p);
-				}
+			if (isInsideBounds(p.getLocation()) && AA_MiniGameControl.isWatchingMiniGames(p)) {
+				spectators.add(p);
 			}
 		}
 		return spectators;
@@ -660,8 +677,8 @@ public class AA_MiniGame {
 	/**
 	 * @return everybody inside minigame AABB (playing, editing, watching players)
 	 */
-	private Collection<Player> getPlayersInArea() {
-		List<Player> playersInArea = new ArrayList<Player>();
+	public ArrayList<Player> getPlayersInArea() {
+		ArrayList<Player> playersInArea = new ArrayList<Player>();
 		for (Player p: Bukkit.getOnlinePlayers()) {
 			if (isInsideBounds(p.getLocation())) {
 				playersInArea.add(p);

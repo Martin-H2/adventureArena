@@ -31,7 +31,7 @@ public class TimedBlockTask implements Runnable {
 	public TimedBlockTask(World w, Vector attachedBlockPosition, Material blockType, double hp, boolean explodeOnDeath, double lifeTime, AA_MiniGame mg, List<Integer> runningTasks, int count) {
 		super();
 		world = w;
-		airBlockAboveAttachedBlock = AA_TerrainHelper.getAirBlockAboveGround(attachedBlockPosition.toLocation(w), true);
+		airBlockAboveAttachedBlock = AA_TerrainHelper.getAirBlockAboveGround(attachedBlockPosition.toLocation(w), true, mg);
 		this.blockType = blockType;
 		this.hp = hp;
 		this.explodeOnDeath = explodeOnDeath;

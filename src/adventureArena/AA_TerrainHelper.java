@@ -21,18 +21,18 @@ public class AA_TerrainHelper {
 
 
 
-	public static Location getAirBlockAboveGroundTelePos(final Location start, final boolean searchUpwards) {
-		return getAirBlockAboveGround(start.getBlock(), searchUpwards).getLocation().add(0.5, 0, 0.5);
+	public static Location getAirBlockAboveGroundTelePos(final Location start, final boolean searchUpwards, AA_MiniGame mg) {
+		return getAirBlockAboveGround(start.getBlock(), searchUpwards, mg).getLocation().add(0.5, 0, 0.5);
 	}
 
-	public static Block getAirBlockAboveGround(final Location start, final boolean searchUpwards) {
-		return getAirBlockAboveGround(start.getBlock(), searchUpwards);
+	public static Block getAirBlockAboveGround(final Location start, final boolean searchUpwards, AA_MiniGame mg) {
+		return getAirBlockAboveGround(start.getBlock(), searchUpwards, mg);
 	}
 
-	static Block getAirBlockAboveGround(final Block start, final boolean searchUpwards) {
-		Block block = start;
+	static Block getAirBlockAboveGround(final Block start, final boolean searchUpwards, AA_MiniGame mg) {
 		BlockFace searchDirection = searchUpwards ? BlockFace.UP : BlockFace.DOWN;
-		while (!isUndestroyableArenaBorder(block)) {
+		Block block = start.getRelative(searchDirection);
+		while (mg.isInsidePlayableBounds(block.getLocation())) {
 			if (isAirBlockAboveGround(block)) return block;
 			block = block.getRelative(searchDirection);
 		}
