@@ -62,9 +62,7 @@ public class AA_Events implements Listener {
 		else if (AA_MiniGameControl.isEditingMiniGame(player)) {
 			AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(player);
 			if (!mg.isInsidePlayableBounds(player.getLocation())) {
-				AA_MiniGameControl.kickFromMiniGameAndHub(player);
-				AA_MessageSystem.sideNote("You escaped with CREATIVE somehow...", player);
-				player.setGameMode(Bukkit.getDefaultGameMode());
+				AA_MiniGameControl.leaveCurrentMiniGame(player, false);
 			}
 		}
 	}

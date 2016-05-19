@@ -51,6 +51,7 @@ public class AA_TerrainHelper {
 
 	public static boolean isUndestroyableArenaBorder(final Block block) {
 		return block.getType() == Material.BEDROCK ||
+			block.getType() == Material.BARRIER ||
 			block.getType() == Material.STAINED_GLASS;
 	}
 
