@@ -13,10 +13,7 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.block.*;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
@@ -60,6 +57,14 @@ public class AA_Events implements Listener {
 					//AA_MessageSystem.consoleDebug("TRIGGER: " + mt);
 					mt.checkRangeAndTrigger(player, mg);
 				}
+			}
+		}
+		else if (AA_MiniGameControl.isEditingMiniGame(player)) {
+			AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(player);
+			if (!mg.isInsidePlayableBounds(player.getLocation())) {
+				AA_MiniGameControl.kickFromMiniGameAndHub(player);
+				AA_MessageSystem.sideNote("You escaped with CREATIVE somehow...", player);
+				player.setGameMode(Bukkit.getDefaultGameMode());
 			}
 		}
 	}
@@ -264,8 +269,28 @@ public class AA_Events implements Listener {
 	@EventHandler
 	public void onPlayerTeleport(final PlayerTeleportEvent e) {
 		if ((AA_MiniGameControl.isPlayingMiniGame(e.getPlayer()) || AA_MiniGameControl.isEditingMiniGame(e.getPlayer()))
-			&& !AA_MiniGameControl.getMiniGameForPlayer(e.getPlayer()).isInsideBounds(e.getTo())) {
+			&& !AA_MiniGameControl.getMiniGameForPlayer(e.getPlayer()).isInsidePlayableBounds(e.getTo())) {
 			e.setCancelled(true);
+		}
+	}
+
+	@EventHandler
+	public void onBlockPistonExtend(BlockPistonExtendEvent e) {
+		for (Block b: e.getBlocks()) {
+			if (AA_TerrainHelper.isUndestroyableArenaBorder(b)) {
+				e.setCancelled(true);
+				break;
+			}
+		}
+	}
+
+	@EventHandler
+	public void onBlockPistonRetract(BlockPistonRetractEvent e) {
+		for (Block b: e.getBlocks()) {
+			if (AA_TerrainHelper.isUndestroyableArenaBorder(b)) {
+				e.setCancelled(true);
+				break;
+			}
 		}
 	}
 
@@ -438,9 +463,15 @@ public class AA_Events implements Listener {
 			}
 			if (!AA_MiniGameControl.isPlayerInsideHisEditableArea(player)) {
 				c.setCancelled(true);
-				AA_MiniGameControl.kickFromMiniGameAndHub(player);
-				AA_MessageSystem.sideNote("You escaped with CREATIVE somehow...", player);
-				player.setGameMode(Bukkit.getDefaultGameMode());
+				AdventureArena.executeDelayed(0.1, new Runnable() {
+
+					@Override
+					public void run() {
+						AA_MiniGameControl.kickFromMiniGameAndHub(player);
+						AA_MessageSystem.sideNote("You escaped with CREATIVE somehow...", player);
+						player.setGameMode(Bukkit.getDefaultGameMode());
+					}
+				});
 			}
 
 		}
