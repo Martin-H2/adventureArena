@@ -3,7 +3,7 @@ package adventureArena.tasks;
 import org.bukkit.scheduler.BukkitRunnable;
 import adventureArena.AdventureArena;
 
-public abstract class AA_PeriodicalTask extends BukkitRunnable {
+public abstract class AbstractPeriodicTask extends BukkitRunnable {
 
 	private int numberOfExecutionsLeft;
 

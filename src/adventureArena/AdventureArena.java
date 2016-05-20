@@ -4,6 +4,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import adventureArena.commands.JoinMghCommand;
+import adventureArena.commands.LeaveMghCommand;
+import adventureArena.commands.MgCommands;
+import adventureArena.commands.ServerInfoCommand;
+import adventureArena.control.HubControl;
+import adventureArena.control.MiniGameLoading;
+import adventureArena.miniGameComponents.MiniGameTrigger;
+import adventureArena.miniGameComponents.SpawnEquip;
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 
 public class AdventureArena extends JavaPlugin {
@@ -16,32 +24,33 @@ public class AdventureArena extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		super.onEnable();
+		instance = this;
+
 		wep = (WorldEditPlugin) getServer().getPluginManager().getPlugin("WorldEdit");
 		if (wep == null) {
-			AA_MessageSystem.consoleError("can't find WorldEdit");
+			MessageSystem.consoleError("can't find WorldEdit");
 		}
 
-		//		bfp = (BountifulAPI) getServer().getPluginManager().getPlugin("BountifulAPI"); //TODO what for ?
-		//		if (bfp == null) {
-		//			AA_MessageSystem.consoleError("can't find BountifulAPI");
-		//		}
+		ConfigurationSerialization.registerClass(SpawnEquip.class);
+		ConfigurationSerialization.registerClass(MiniGameTrigger.class);
 
+		getServer().getPluginManager().registerEvents(new Events(), this);
 
-		ConfigurationSerialization.registerClass(AA_SpawnEquip.class);
-		ConfigurationSerialization.registerClass(AA_BlockTrigger.class);
-		instance = this;
-		getServer().getPluginManager().registerEvents(new AA_Events(), this);
-		new AA_Commands(this);
-		AA_MiniGameControl.loadMiniGamesFromConfig();
-		AA_MessageSystem.consoleInfo("loaded " + AA_MiniGameControl.getNumberOfMiniGames() + " miniGame configs.");
+		new JoinMghCommand();
+		new LeaveMghCommand();
+		new MgCommands();
+		new ServerInfoCommand();
+
+		MiniGameLoading.loadMiniGamesFromConfig();
+		MessageSystem.consoleInfo("loaded " + MiniGameLoading.getNumberOfMiniGames() + " miniGame configs.");
 	}
 
 
 	@Override
 	public void onDisable() {
 		for (Player p: Bukkit.getOnlinePlayers()) {
-			if (AA_MiniGameControl.isInMiniGameHub(p)) {
-				AA_MiniGameControl.kickFromMiniGameAndHub(p);
+			if (HubControl.isInMiniGameHub(p)) { // important for consistency (non-persistent objects will be lost)
+				HubControl.kickFromMiniGameAndHub(p);
 			}
 		}
 	}

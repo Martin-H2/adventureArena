@@ -1,4 +1,4 @@
-package adventureArena;
+package adventureArena.miniGameComponents;
 
 import java.util.*;
 import org.bukkit.Bukkit;
@@ -6,15 +6,19 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
-import adventureArena.AA_ScoreManager.ScoreType;
+import adventureArena.*;
+import adventureArena.control.TeamManager;
+import adventureArena.control.MiniGameLoading;
+import adventureArena.control.PlayerControl;
+import adventureArena.enums.ConfigPaths;
+import adventureArena.enums.HighScoreMode;
+import adventureArena.enums.ScoreType;
 
-public class AA_MiniGame {
+public class MiniGame {
 
 
 	private final int						id;
@@ -23,14 +27,14 @@ public class AA_MiniGame {
 	private String							name					= "newMiniGame";
 	private String							king					= null;
 	private boolean							pvpDamage				= false;
-	private ScoreMode						scoreMode				= ScoreMode.ScoreByCommand;
+	private HighScoreMode					scoreMode				= HighScoreMode.ScoreByCommand;
 	private final Map<String, List<Vector>>	spawnPoints				= new HashMap<String, List<Vector>>();
 	//private final List<ItemStack> spawnEquip = new ArrayList<ItemStack>();
-	private final List<AA_SpawnEquip>		spawnEquipDefinitions	= new ArrayList<AA_SpawnEquip>();
+	private final List<SpawnEquip>			spawnEquipDefinitions	= new ArrayList<SpawnEquip>();
 	private final List<String>				allowedEditors			= new ArrayList<String>();
 	private final List<Vector>				highScoreSignLocations	= new ArrayList<Vector>();
-	private final List<AA_BlockTrigger>		rangedMonsterTriggers	= new ArrayList<AA_BlockTrigger>();
-	private final List<AA_BlockTrigger>		startMonsterTriggers	= new ArrayList<AA_BlockTrigger>();
+	private final List<MiniGameTrigger>		rangedTriggers			= new ArrayList<MiniGameTrigger>();
+	private final List<MiniGameTrigger>		startTriggers			= new ArrayList<MiniGameTrigger>();
 
 	private boolean							needsPersisting			= true;
 	private boolean							needsEnvironmentBackup	= true;
@@ -52,77 +56,77 @@ public class AA_MiniGame {
 
 	//################## OBJECT LIFECYLCE ######################
 
-	public AA_MiniGame(final int id, final World w) {
+	public MiniGame(final int id, final World w) {
 		this.id = id;
 		world = w;
 		if (w == null) {
-			AA_MessageSystem.consoleError("world is NULL for " + this);
+			MessageSystem.consoleError("world is NULL for " + this);
 		}
 	}
 
 	public void persist() {
-		set(AA_ConfigPaths.needsEnvironmentBackup, needsEnvironmentBackup);
-		set(AA_ConfigPaths.lockedByEditSession, lockedByEditSession);
-		set(AA_ConfigPaths.inProgress, inProgress);
-		set(AA_ConfigPaths.worldName, world.getName());
-		set(AA_ConfigPaths.southEastMax, getSouthEastMax());
-		set(AA_ConfigPaths.northWestMin, getNorthWestMin());
-		set(AA_ConfigPaths.name, name);
-		set(AA_ConfigPaths.king, king);
-		set(AA_ConfigPaths.pvpDamage, pvpDamage);
-		set(AA_ConfigPaths.scoreMode, scoreMode.toString());
+		set(ConfigPaths.needsEnvironmentBackup, needsEnvironmentBackup);
+		set(ConfigPaths.lockedByEditSession, lockedByEditSession);
+		set(ConfigPaths.inProgress, inProgress);
+		set(ConfigPaths.worldName, world.getName());
+		set(ConfigPaths.southEastMax, getSouthEastMax());
+		set(ConfigPaths.northWestMin, getNorthWestMin());
+		set(ConfigPaths.name, name);
+		set(ConfigPaths.king, king);
+		set(ConfigPaths.pvpDamage, pvpDamage);
+		set(ConfigPaths.scoreMode, scoreMode.toString());
 		//set(AA_ConfigPaths.spawnPoints, spawnPoints);
 		for (String teamName: spawnPoints.keySet()) {
-			set(AA_ConfigPaths.spawnPoints + "." + teamName, spawnPoints.get(teamName));
+			set(ConfigPaths.spawnPoints + "." + teamName, spawnPoints.get(teamName));
 		}
-		set(AA_ConfigPaths.spawnEquip, spawnEquipDefinitions);
-		set(AA_ConfigPaths.rangedMonsterTriggers, rangedMonsterTriggers);
-		set(AA_ConfigPaths.startMonsterTriggers, startMonsterTriggers);
-		set(AA_ConfigPaths.allowedEditors, allowedEditors);
-		set(AA_ConfigPaths.highScoreSignLocations, highScoreSignLocations);
-		AA_MiniGameControl.saveMiniGameConfig();
+		set(ConfigPaths.spawnEquip, spawnEquipDefinitions);
+		set(ConfigPaths.rangedMonsterTriggers, rangedTriggers);
+		set(ConfigPaths.startMonsterTriggers, startTriggers);
+		set(ConfigPaths.allowedEditors, allowedEditors);
+		set(ConfigPaths.highScoreSignLocations, highScoreSignLocations);
+		ConfigAccess.saveMiniGameConfig();
 		needsPersisting = false;
 	}
 
 	private void set(final String miniGameSubPath, final Object obj) {
-		AA_MiniGameControl.getMiniGameConfig().set(id + "." + miniGameSubPath, obj);
+		ConfigAccess.getMiniGameConfig().set(id + "." + miniGameSubPath, obj);
 		needsPersisting = true;
 	}
 
-	public static AA_MiniGame loadFromConfig(final int id) {
-		FileConfiguration cfg = AA_MiniGameControl.getMiniGameConfig();
+	public static MiniGame loadFromConfig(final int id) {
+		FileConfiguration cfg = ConfigAccess.getMiniGameConfig();
 		String miniGameRootPath = String.valueOf(id);
 		if (!cfg.contains(miniGameRootPath)) return null;
-		AA_MiniGame mg = new AA_MiniGame(id, Bukkit.getWorld(cfg.getString(miniGameRootPath + "." + AA_ConfigPaths.worldName, "3gd")));
-		mg.needsEnvironmentBackup = cfg.getBoolean(miniGameRootPath + "." + AA_ConfigPaths.needsEnvironmentBackup, true);
-		mg.lockedByEditSession = cfg.getBoolean(miniGameRootPath + "." + AA_ConfigPaths.lockedByEditSession, false);
-		mg.inProgress = cfg.getBoolean(miniGameRootPath + "." + AA_ConfigPaths.inProgress, false);
-		mg.setSouthEastMax(cfg.getVector(miniGameRootPath + "." + AA_ConfigPaths.southEastMax, null));
-		mg.setNorthWestMin(cfg.getVector(miniGameRootPath + "." + AA_ConfigPaths.northWestMin, null));
-		mg.name = cfg.getString(miniGameRootPath + "." + AA_ConfigPaths.name, "newMiniGame");
-		mg.king = cfg.getString(miniGameRootPath + "." + AA_ConfigPaths.king, null);
-		mg.pvpDamage = cfg.getBoolean(miniGameRootPath + "." + AA_ConfigPaths.pvpDamage, false);
-		mg.scoreMode = ScoreMode.valueOf(cfg.getString(miniGameRootPath + "." + AA_ConfigPaths.scoreMode, ScoreMode.ScoreByCommand.toString()));
+		MiniGame mg = new MiniGame(id, Bukkit.getWorld(cfg.getString(miniGameRootPath + "." + ConfigPaths.worldName, "3gd")));
+		mg.needsEnvironmentBackup = cfg.getBoolean(miniGameRootPath + "." + ConfigPaths.needsEnvironmentBackup, true);
+		mg.lockedByEditSession = cfg.getBoolean(miniGameRootPath + "." + ConfigPaths.lockedByEditSession, false);
+		mg.inProgress = cfg.getBoolean(miniGameRootPath + "." + ConfigPaths.inProgress, false);
+		mg.setSouthEastMax(cfg.getVector(miniGameRootPath + "." + ConfigPaths.southEastMax, null));
+		mg.setNorthWestMin(cfg.getVector(miniGameRootPath + "." + ConfigPaths.northWestMin, null));
+		mg.name = cfg.getString(miniGameRootPath + "." + ConfigPaths.name, "newMiniGame");
+		mg.king = cfg.getString(miniGameRootPath + "." + ConfigPaths.king, null);
+		mg.pvpDamage = cfg.getBoolean(miniGameRootPath + "." + ConfigPaths.pvpDamage, false);
+		mg.scoreMode = HighScoreMode.valueOf(cfg.getString(miniGameRootPath + "." + ConfigPaths.scoreMode, HighScoreMode.ScoreByCommand.toString()));
 		//fillSpawnPointMap(miniGameRootPath + "." + AA_ConfigPaths.spawnPoints, mg);
-		ConfigurationSection spawns = cfg.getConfigurationSection(miniGameRootPath + "." + AA_ConfigPaths.spawnPoints);
+		ConfigurationSection spawns = cfg.getConfigurationSection(miniGameRootPath + "." + ConfigPaths.spawnPoints);
 		if (spawns != null) {
 			for (String teamPath: spawns.getKeys(false)) {
 				List<Vector> ts = new ArrayList<Vector>();
-				fillCollection(miniGameRootPath + "." + AA_ConfigPaths.spawnPoints + "." + teamPath, ts);
+				fillCollection(miniGameRootPath + "." + ConfigPaths.spawnPoints + "." + teamPath, ts);
 				mg.spawnPoints.put(teamPath, ts);
 			}
 		}
-		fillCollection(miniGameRootPath + "." + AA_ConfigPaths.spawnEquip, mg.getSpawnEquipDefinitions());
-		fillCollection(miniGameRootPath + "." + AA_ConfigPaths.rangedMonsterTriggers, mg.rangedMonsterTriggers);
-		fillCollection(miniGameRootPath + "." + AA_ConfigPaths.startMonsterTriggers, mg.startMonsterTriggers);
-		fillCollection(miniGameRootPath + "." + AA_ConfigPaths.allowedEditors, mg.allowedEditors);
-		fillCollection(miniGameRootPath + "." + AA_ConfigPaths.highScoreSignLocations, mg.highScoreSignLocations);
+		fillCollection(miniGameRootPath + "." + ConfigPaths.spawnEquip, mg.getSpawnEquipDefinitions());
+		fillCollection(miniGameRootPath + "." + ConfigPaths.rangedMonsterTriggers, mg.rangedTriggers);
+		fillCollection(miniGameRootPath + "." + ConfigPaths.startMonsterTriggers, mg.startTriggers);
+		fillCollection(miniGameRootPath + "." + ConfigPaths.allowedEditors, mg.allowedEditors);
+		fillCollection(miniGameRootPath + "." + ConfigPaths.highScoreSignLocations, mg.highScoreSignLocations);
 		mg.needsPersisting = false;
 		return mg;
 	}
 
 	private static <T> void fillCollection(final String path, final Collection<T> collection) {
-		List<?> cfgCollection = AA_MiniGameControl.getMiniGameConfig().getList(path);
+		List<?> cfgCollection = ConfigAccess.getMiniGameConfig().getList(path);
 		if (cfgCollection instanceof Collection<?>) {
 			for (Object cfgElement: (Collection<?>) cfgCollection) {
 				try {
@@ -167,7 +171,7 @@ public class AA_MiniGame {
 			calcSpectatorRespawnPoint();
 		}
 		if (spectatorRespawnPoint == null) {
-			AA_MessageSystem.consoleError("can't calc spectatorRespawnPoint for '" + name + "', id: " + id);
+			MessageSystem.consoleError("can't calc spectatorRespawnPoint for '" + name + "', id: " + id);
 		}
 		return spectatorRespawnPoint;
 	}
@@ -207,13 +211,13 @@ public class AA_MiniGame {
 		needsPersisting = true;
 	}
 
-	public ScoreMode getScoreMode() {
+	public HighScoreMode getScoreMode() {
 		return scoreMode;
 	}
 
 	public ScoreType getScoreTypeForHighscore() {
 		ScoreType st = ScoreType.CMD_RATING;
-		if (getScoreMode() == ScoreMode.KillsPerDeath) {
+		if (getScoreMode() == HighScoreMode.KillsPerDeath) {
 			if (isPvp()) {
 				st = ScoreType.PVP_RATING;
 			}
@@ -221,13 +225,13 @@ public class AA_MiniGame {
 				st = ScoreType.PVE_RATING;
 			}
 		}
-		else if (getScoreMode() == ScoreMode.LastManStanding) {
+		else if (getScoreMode() == HighScoreMode.LastManStanding) {
 			st = ScoreType.LTS_RATING;
 		}
 		return st;
 	}
 
-	public void setScoreMode(final ScoreMode scoreMode) {
+	public void setScoreMode(final HighScoreMode scoreMode) {
 		this.scoreMode = scoreMode;
 		needsPersisting = true;
 	}
@@ -254,33 +258,33 @@ public class AA_MiniGame {
 
 	public void removeSpawnPoint(final String teamName, final Vector loc) {
 		if (!spawnPoints.containsKey(teamName)) {
-			AA_MessageSystem.consoleError("failed to remove spawnpoint " + loc.toString() + " from " + this + ", team not found: " + teamName);
+			MessageSystem.consoleError("failed to remove spawnpoint " + loc.toString() + " from " + this + ", team not found: " + teamName);
 			return;
 		}
 		spawnPoints.get(teamName).remove(loc);
 		needsPersisting = true;
 	}
 
-	public void addMonsterTrigger(final AA_BlockTrigger monsterTrigger) {
+	public void addMonsterTrigger(final MiniGameTrigger monsterTrigger) {
 		if (monsterTrigger.isSpawnTrigger()) {
-			startMonsterTriggers.add(monsterTrigger);
+			startTriggers.add(monsterTrigger);
 		}
 		else {
-			rangedMonsterTriggers.add(monsterTrigger);
+			rangedTriggers.add(monsterTrigger);
 		}
 		needsPersisting = true;
 	}
 
 	public void removeMonsterTriggerBySignPos(final Vector monsterTriggerSignPos) {
-		for (Iterator<AA_BlockTrigger> iter = startMonsterTriggers.iterator(); iter.hasNext();) {
-			AA_BlockTrigger mt = iter.next();
+		for (Iterator<MiniGameTrigger> iter = startTriggers.iterator(); iter.hasNext();) {
+			MiniGameTrigger mt = iter.next();
 			if (monsterTriggerSignPos.equals(mt.getSignPos())) {
 				iter.remove();
 				needsPersisting = true;
 			}
 		}
-		for (Iterator<AA_BlockTrigger> iter = rangedMonsterTriggers.iterator(); iter.hasNext();) {
-			AA_BlockTrigger mt = iter.next();
+		for (Iterator<MiniGameTrigger> iter = rangedTriggers.iterator(); iter.hasNext();) {
+			MiniGameTrigger mt = iter.next();
 			if (monsterTriggerSignPos.equals(mt.getSignPos())) {
 				iter.remove();
 				needsPersisting = true;
@@ -288,26 +292,26 @@ public class AA_MiniGame {
 		}
 	}
 
-	public List<AA_BlockTrigger> getRangedMonsterTriggers() {
-		return rangedMonsterTriggers;
+	public List<MiniGameTrigger> getRangedMonsterTriggers() {
+		return rangedTriggers;
 	}
 
-	public List<AA_BlockTrigger> getStartMonsterTriggers() {
-		return startMonsterTriggers;
+	public List<MiniGameTrigger> getStartTriggers() {
+		return startTriggers;
 	}
 
-	public List<AA_SpawnEquip> getSpawnEquipDefinitions() {
+	public List<SpawnEquip> getSpawnEquipDefinitions() {
 		return spawnEquipDefinitions;
 	}
 
-	public void addSpawnEquipDefinition(final AA_SpawnEquip item) {
+	public void addSpawnEquipDefinition(final SpawnEquip item) {
 		spawnEquipDefinitions.add(item);
 		needsPersisting = true;
 	}
 
 	public void removeSpawnEquipBySignPos(final Vector spawnEquipSignPos) {
-		for (Iterator<AA_SpawnEquip> iter = spawnEquipDefinitions.iterator(); iter.hasNext();) {
-			AA_SpawnEquip se = iter.next();
+		for (Iterator<SpawnEquip> iter = spawnEquipDefinitions.iterator(); iter.hasNext();) {
+			SpawnEquip se = iter.next();
 			if (spawnEquipSignPos.equals(se.getSignPos())) {
 				iter.remove();
 				needsPersisting = true;
@@ -360,7 +364,7 @@ public class AA_MiniGame {
 			highScoreSignLocations.add(location.toVector());
 			needsPersisting = true;
 		}
-		final AA_MiniGame mg = this;
+		final MiniGame mg = this;
 		AdventureArena.executeDelayed(0.1, new Runnable() {
 
 			@Override
@@ -388,7 +392,7 @@ public class AA_MiniGame {
 		return world;
 	}
 
-	//################## DIRTY & LOCK FLAGS ######################
+	//################## LOCKS & DIRTY-FLAGS ######################
 
 	public boolean needsPersisting() {
 		return needsPersisting;
@@ -427,13 +431,13 @@ public class AA_MiniGame {
 
 	public boolean doEnvironmentBackup() {
 		//AA_MessageSystem.sideNoteForGroup("Saving environment backup for '" + name + "' (id:" + id + ")", getPlayersInArea());
-		if (AA_TerrainHelper.saveMiniGameToSchematic(getNorthWestMin(), getSouthEastMax(), id, world)) {
+		if (TerrainHelper.saveMiniGameToSchematic(getNorthWestMin(), getSouthEastMax(), id, world)) {
 			needsEnvironmentBackup = false;
 			persist();
 			return true;
 		}
 		else {
-			AA_MessageSystem.errorForGroup("...backup failed!", getAllowedEditors());
+			MessageSystem.errorToGroup("...backup failed!", getAllowedEditors());
 			return false;
 		}
 
@@ -441,13 +445,13 @@ public class AA_MiniGame {
 
 	public boolean restoreEnvironmentBackup() {
 		//AA_MessageSystem.sideNoteForGroup("Loading environment backup for '" + name + "' (id:" + id + ")", getPlayersInArea());
-		if (AA_TerrainHelper.loadMinigameFromSchematic(id, world)) {
+		if (TerrainHelper.loadMinigameFromSchematic(id, world)) {
 			needsEnvironmentBackup = false;
 			persist();
 			return true;
 		}
 		else {
-			AA_MessageSystem.errorForGroup("...restore failed!", getAllowedEditors());
+			MessageSystem.errorToGroup("...restore failed!", getAllowedEditors());
 			return false;
 		}
 	}
@@ -456,13 +460,15 @@ public class AA_MiniGame {
 
 	public void wipeEntities() {
 		for (Entity e: world.getEntities()) {
-			if (isInsideBounds(e.getLocation()) && e.getType() != EntityType.PLAYER) {
-				//AA_MessageSystem.consoleWarn("WIPE: " + e.getName());
+			if (isInsideBounds(e.getLocation()) && !isProtectedEntity(e)) {
 				e.remove();
 			}
 		}
 	}
 
+	boolean isProtectedEntity(Entity e) {
+		return e instanceof Hanging || e instanceof Vehicle || e instanceof ArmorStand || e instanceof Player;
+	}
 
 
 	//################## UTIL ######################
@@ -498,8 +504,8 @@ public class AA_MiniGame {
 			+ ", #spawnPoints:" + getNumberOfSpawnPoints() + ", #spawnEquip:" + spawnEquipDefinitions.size()
 			+ ", allowedEditors=" + allowedEditors.toString()
 			+ ", #highScoreSignLocations: " + highScoreSignLocations.size()
-			+ ", #startTriggers: " + startMonsterTriggers.size()
-			+ ", #distanceTriggers: " + rangedMonsterTriggers.size()
+			+ ", #startTriggers: " + startTriggers.size()
+			+ ", #distanceTriggers: " + rangedTriggers.size()
 			+ ", needsEnvironmentBackup: " + needsEnvironmentBackup
 			+ ", inProgress: " + inProgress
 			+ ", lockedByEditSession: " + lockedByEditSession
@@ -512,8 +518,8 @@ public class AA_MiniGame {
 
 	@Override
 	public boolean equals(final Object obj) {
-		if (!(obj instanceof AA_MiniGame)) return false;
-		return id == ((AA_MiniGame) obj).getID();
+		if (!(obj instanceof MiniGame)) return false;
+		return id == ((MiniGame) obj).getID();
 	}
 
 
@@ -532,9 +538,9 @@ public class AA_MiniGame {
 
 
 	@SuppressWarnings ("deprecation")
-	void addPlayer(final String teamName, final Player p) {
+	public void addPlayer(final String teamName, final Player p) {
 		activePlayers.add(p);
-		Team t = AA_TeamManager.getTeam(id + ":" + teamName, this);
+		Team t = TeamManager.getTeam(id + ":" + teamName, this);
 		if (t.hasPlayer(p)) return;
 		t.addPlayer(p);
 		if (initialJoiners.containsKey(teamName)) {
@@ -546,9 +552,9 @@ public class AA_MiniGame {
 	}
 
 	@SuppressWarnings ("deprecation")
-	void removePlayer(final Player p) {
+	public void removePlayer(final Player p) {
 		activePlayers.remove(p);
-		Team t = AA_TeamManager.getTeam(p);
+		Team t = TeamManager.getTeam(p);
 		if (t == null) return;
 		t.removePlayer(p);
 		if (t.getSize() == 0) {
@@ -556,19 +562,20 @@ public class AA_MiniGame {
 		}
 	}
 
-	public void wipePlaySession() {
+	public void wipeSessionVariables() {
+		setInProgress(false);
+		setLockedByEditSession(false);
 		initialJoiners.clear();
 		activePlayers.clear();
 		isOver = false;
 		for (Team t: getTeams()) {
-			AA_MessageSystem.consoleWarn("cleaning up team: " + t.getName());
+			MessageSystem.consoleWarn("cleaning up team: " + t.getName());
 			t.unregister();
 		}
-		setInProgress(false);
-		for (AA_BlockTrigger mt: startMonsterTriggers) {
+		for (MiniGameTrigger mt: startTriggers) {
 			mt.reset();
 		}
-		for (AA_BlockTrigger mt: rangedMonsterTriggers) {
+		for (MiniGameTrigger mt: rangedTriggers) {
 			mt.reset();
 		}
 	}
@@ -592,13 +599,13 @@ public class AA_MiniGame {
 	//		return t.getSize();
 	//	}
 	public int getNumberOfEnemyPlayersRemaining(Player pov) {
-		if (!equals(AA_MiniGameControl.getMiniGameForPlayer(pov))) {
-			AA_MessageSystem.consoleError("getNumberOfEnemiesRemaining: " + pov.getName() + " is not inside " + getName());
+		if (!equals(MiniGameLoading.getMiniGameForPlayer(pov))) {
+			MessageSystem.consoleError("getNumberOfEnemiesRemaining: " + pov.getName() + " is not inside " + getName());
 			return 0;
 		}
 		if (!isPvp()) return 0;
 
-		final Team poiTeam = AA_TeamManager.getTeam(pov);
+		final Team poiTeam = TeamManager.getTeam(pov);
 		int totalEnemies = 0;
 		if (isTeamPlayModeActive()) {
 			for (Team t: getTeams()) {
@@ -619,14 +626,14 @@ public class AA_MiniGame {
 	}
 
 	public boolean isSoloPlayable() {
-		return scoreMode == ScoreMode.ScoreByCommand || scoreMode == ScoreMode.KillsPerDeath && !pvpDamage;
+		return scoreMode == HighScoreMode.ScoreByCommand || scoreMode == HighScoreMode.KillsPerDeath && !pvpDamage;
 	}
 
 	public List<Team> getTeams() {
 		String teamNameIdPrefix = String.valueOf(id) + ":";
 		List<Team> miniGameTeams = new ArrayList<Team>();
 
-		for (Team t: AA_TeamManager.scoreBoard.getTeams()) {
+		for (Team t: TeamManager.scoreBoard.getTeams()) {
 			if (t.getName().startsWith(teamNameIdPrefix)) {
 				miniGameTeams.add(t);
 			}
@@ -667,7 +674,7 @@ public class AA_MiniGame {
 	public List<Player> getSpectators() {
 		List<Player> spectators = new ArrayList<Player>();
 		for (Player p: Bukkit.getOnlinePlayers()) {
-			if (isInsideBounds(p.getLocation()) && AA_MiniGameControl.isWatchingMiniGames(p)) {
+			if (isInsideBounds(p.getLocation()) && PlayerControl.isWatchingMiniGames(p)) {
 				spectators.add(p);
 			}
 		}
@@ -692,18 +699,18 @@ public class AA_MiniGame {
 		name = "newMiniGame";
 		king = null;
 		pvpDamage = false;
-		scoreMode = ScoreMode.ScoreByCommand;
+		scoreMode = HighScoreMode.ScoreByCommand;
 		spawnPoints.clear();
 		spawnEquipDefinitions.clear();
 		allowedEditors.clear();
-		rangedMonsterTriggers.clear();
-		startMonsterTriggers.clear();
+		rangedTriggers.clear();
+		startTriggers.clear();
 		needsPersisting = true;
 		needsEnvironmentBackup = true;
 		lockedByEditSession = false;
 		inProgress = false;
 		persist();
-		AA_TerrainHelper.resetMiniGameRoom(this);
+		TerrainHelper.resetMiniGameRoom(this);
 		doEnvironmentBackup();
 	}
 
@@ -713,6 +720,7 @@ public class AA_MiniGame {
 		}
 		return playableAreaMidpoint;
 	}
+
 
 
 }

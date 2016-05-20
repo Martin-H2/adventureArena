@@ -1,6 +1,6 @@
-package adventureArena;
+package adventureArena.enums;
 
-public class AA_ConfigPaths {
+public class ConfigPaths {
 	public static final String savedCreativeData = "savedCreativeData";
 	public static final String savedPlayerData = "savedPlayerData";
 	public static final String health = "health";

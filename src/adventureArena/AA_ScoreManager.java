@@ -1,7 +1,5 @@
 package adventureArena;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.Map.Entry;
 import org.bukkit.ChatColor;
@@ -9,34 +7,28 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
+import adventureArena.control.MiniGameLoading;
+import adventureArena.control.PlayerControl;
+import adventureArena.enums.HighScoreMode;
+import adventureArena.enums.ScoreType;
+import adventureArena.miniGameComponents.MiniGame;
 
 public class AA_ScoreManager {
 
-	enum ScoreType {
-		DEATHS,
-		KILLS_PVP,
-		KILLS_PVE,
-		PVP_RATING,
-		PVE_RATING,
-		CMD_RATING,
-		LTS_RATING
-	}
 	private static final double	DEFAULT_RATING		= 500.0;
 	private static final double	AVERAGE_SCORESTEAL	= 25.0;
 
 
 	public static void updateHighScoreLists() {
-		for (AA_MiniGame mg: AA_MiniGameControl.getMiniGames()) {
+		for (MiniGame mg: MiniGameLoading.getMiniGames()) {
 			updateHighScoreList(mg);
 		}
 	}
 
-	public static void updateHighScoreList(final AA_MiniGame mg) {
+	public static void updateHighScoreList(final MiniGame mg) {
 		List<Vector> signLocsToRemove = new ArrayList<Vector>();
 		for (Vector v: mg.getHighScoreSignLocations()) {
 			Block signBlock = v.toLocation(mg.getWorld()).getBlock();
@@ -44,7 +36,7 @@ public class AA_ScoreManager {
 				Sign signState = (Sign) signBlock.getState();
 				String[] lines = signState.getLines();
 				if (!lines[0].startsWith("[") && !lines[0].startsWith(ChatColor.RED + "==")) {
-					AA_MessageSystem.consoleInfo("mg." + mg.getID() + ": removing HighScoreSignLocation from " + v.toString() + " (wrong sign text)");
+					MessageSystem.consoleInfo("mg." + mg.getID() + ": removing HighScoreSignLocation from " + v.toString() + " (wrong sign text)");
 					signLocsToRemove.add(v);
 					break;
 				}
@@ -63,7 +55,7 @@ public class AA_ScoreManager {
 							color = ChatColor.GREEN;
 							String oldKing = mg.getKing();
 							if (!playerName.equals(oldKing)) {
-								AA_MessageSystem.broadcast(ChatColor.GOLD + "[" + mg.getName() + "] NEW HIGHSCORE LEADER: " + ChatColor.RED + playerName + " with " + score);
+								MessageSystem.broadcast(ChatColor.GOLD + "[" + mg.getName() + "] NEW HIGHSCORE LEADER: " + ChatColor.RED + playerName + " with " + score);
 								mg.setKing(playerName);
 							}
 						}
@@ -84,7 +76,7 @@ public class AA_ScoreManager {
 				}
 			}
 			else {
-				AA_MessageSystem.consoleInfo("mg." + mg.getID() + ": removing HighScoreSignLocation from " + v.toString() + " (no sign here)");
+				MessageSystem.consoleInfo("mg." + mg.getID() + ": removing HighScoreSignLocation from " + v.toString() + " (no sign here)");
 				signLocsToRemove.add(v);
 				break;
 			}
@@ -101,26 +93,26 @@ public class AA_ScoreManager {
 		else return null;
 	}
 
-	public static String getHighScoreHeading(final AA_MiniGame mg) {
+	public static String getHighScoreHeading(final MiniGame mg) {
 		return ChatColor.RED + "==" + mg.getName() + "==";
 	}
 
-	private static List<Entry<String, Double>> getSortedHighscoreList(final AA_MiniGame mg) {
+	private static List<Entry<String, Double>> getSortedHighscoreList(final MiniGame mg) {
 		Map<String, Double> sortedHighscoreList = new HashMap<String, Double>();
 		ScoreType st = mg.getScoreTypeForHighscore();
-		ConfigurationSection scores = getHighscoreConfig().getConfigurationSection(mg.getID() + "." + st.toString());
+		ConfigurationSection scores = ConfigAccess.getHighscoreConfig().getConfigurationSection(mg.getID() + "." + st.toString());
 		if (scores != null) {
 			for (String playerName: scores.getKeys(false)) {
 				sortedHighscoreList.put(playerName, scores.getDouble(playerName));
 			}
 		}
-		return AA_Util.sortByValue(sortedHighscoreList, false);
+		return Util.sortByValue(sortedHighscoreList, false);
 	}
 
 
 
 	public static void onEntityDeath(final LivingEntity entity, final Player killer) {
-		AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(killer);
+		MiniGame mg = MiniGameLoading.getMiniGameForPlayer(killer);
 		if (mg == null) return;
 		addScore(mg, ScoreType.KILLS_PVE, killer, entity.getMaxHealth() / killer.getMaxHealth());
 		double pveKills = getScore(mg, ScoreType.KILLS_PVE, killer);
@@ -135,7 +127,7 @@ public class AA_ScoreManager {
 	 *
 	 */
 	public static void onPlayerDeath(final Player dyingPlayer) {
-		AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(dyingPlayer);
+		MiniGame mg = MiniGameLoading.getMiniGameForPlayer(dyingPlayer);
 		if (mg == null) return;
 
 		// DEATH
@@ -148,7 +140,7 @@ public class AA_ScoreManager {
 				for (Player remainingPlayer: mg.getPlayersRemaining()) {
 					if (!dyingPlayer.equals(remainingPlayer)) {
 						killer = remainingPlayer;
-						AA_MessageSystem.gameplayWarningForGroup("detected suicide in 1vs1, counting as kill for " + killer.getName(), mg.getPlayersRemaining());
+						MessageSystem.warningToGroup("detected suicide in 1vs1, counting as kill for " + killer.getName(), mg.getPlayersRemaining());
 						break;
 					}
 				}
@@ -180,35 +172,35 @@ public class AA_ScoreManager {
 		}
 	}
 
-	public static void onPlayerLeft(final AA_MiniGame mg, final Player player) {
-		if (mg.getScoreMode() == ScoreMode.LastManStanding) {
+	public static void onPlayerLeft(final MiniGame mg, final Player player) {
+		if (mg.getScoreMode() == HighScoreMode.LastManStanding) {
 			double i = mg.getInitialNumberOfPlayers();
 			double p = mg.getNumberOfPlayersRemaining();
 			double score = 1.0 - 2.0 * p / (i - 1.0);
 			if (score == Double.NaN) {
 				score = 0;
 			}
-			AA_MessageSystem.consoleDebug("LastManStanding: " + player.getName() + " got " + score * AVERAGE_SCORESTEAL + " points (" + p + "/" + i + " still in game)");
+			MessageSystem.consoleDebug("LastManStanding: " + player.getName() + " got " + score * AVERAGE_SCORESTEAL + " points (" + p + "/" + i + " still in game)");
 			double ltsRating = getScore(mg, ScoreType.LTS_RATING, player, DEFAULT_RATING);
 			setScore(mg, ScoreType.LTS_RATING, player, ltsRating + score * AVERAGE_SCORESTEAL);
 		}
 	}
 
-	public static void onPlayerWin(final AA_MiniGame mg, final Player player) {
-		if (mg.getScoreMode() == ScoreMode.LastManStanding) {
-			AA_MessageSystem.consoleDebug("LastManStanding: " + player.getName() + " got " + AVERAGE_SCORESTEAL + " points for winning");
+	public static void onPlayerWin(final MiniGame mg, final Player player) {
+		if (mg.getScoreMode() == HighScoreMode.LastManStanding) {
+			MessageSystem.consoleDebug("LastManStanding: " + player.getName() + " got " + AVERAGE_SCORESTEAL + " points for winning");
 			double ltsRating = getScore(mg, ScoreType.LTS_RATING, player, DEFAULT_RATING);
 			setScore(mg, ScoreType.LTS_RATING, player, ltsRating + AVERAGE_SCORESTEAL);
 		}
 	}
 
 	public static void onSetScoreCmd(final Player p, final double newScore) {
-		AA_MiniGame mg = AA_MiniGameControl.getMiniGameForPlayer(p);
-		if (mg != null && AA_MiniGameControl.isPlayingMiniGame(p)) {
+		MiniGame mg = MiniGameLoading.getMiniGameForPlayer(p);
+		if (mg != null && PlayerControl.isPlayingMiniGame(p)) {
 			double oldScore = getScore(mg, ScoreType.CMD_RATING, p, 0.0);
 			if (newScore > oldScore) {
-				if (mg.getScoreMode() == ScoreMode.ScoreByCommand) {
-					AA_MessageSystem.success("Your " + mg.getName() + " score is now: " + ChatColor.GOLD + Math.round(newScore), p);
+				if (mg.getScoreMode() == HighScoreMode.ScoreByCommand) {
+					MessageSystem.success("Your " + mg.getName() + " score is now: " + ChatColor.GOLD + Math.round(newScore), p);
 				}
 				setScore(mg, ScoreType.CMD_RATING, p, newScore);
 			}
@@ -220,81 +212,41 @@ public class AA_ScoreManager {
 	// ################ CONFIG TO SCORE ##################
 
 
-	private static double getScore(final AA_MiniGame mg, final ScoreType st, final Player p, final double defaultValue) {
-		return getHighscoreConfig().getDouble(mg.getID() + "." + st.toString() + "." + p.getName(), defaultValue);
+	private static double getScore(final MiniGame mg, final ScoreType st, final Player p, final double defaultValue) {
+		return ConfigAccess.getHighscoreConfig().getDouble(mg.getID() + "." + st.toString() + "." + p.getName(), defaultValue);
 	}
 
-	private static double getScore(final AA_MiniGame mg, final ScoreType st, final Player p) {
+	private static double getScore(final MiniGame mg, final ScoreType st, final Player p) {
 		return getScore(mg, st, p, 0.0);
 	}
 
-	public static double getHighScoreRating(final AA_MiniGame mg, final Player p) {
+	public static double getHighScoreRating(final MiniGame mg, final Player p) {
 		return getScore(mg, mg.getScoreTypeForHighscore(), p, 0.0);
 	}
 
-	private static void setScore(final AA_MiniGame mg, final ScoreType st, final Player p, final double newScore) {
-		getHighscoreConfig().set(mg.getID() + "." + st.toString() + "." + p.getName(), newScore);
-		saveHighscoreConfig();
+	private static void setScore(final MiniGame mg, final ScoreType st, final Player p, final double newScore) {
+		ConfigAccess.getHighscoreConfig().set(mg.getID() + "." + st.toString() + "." + p.getName(), newScore);
+		ConfigAccess.saveHighscoreConfig();
 	}
 
-	private static void addScore(final AA_MiniGame mg, final ScoreType st, final Player p, final double addedScore) {
+	private static void addScore(final MiniGame mg, final ScoreType st, final Player p, final double addedScore) {
 		setScore(mg, st, p, getScore(mg, st, p) + addedScore);
 	}
 
-	private static void addScore(final AA_MiniGame mg, final ScoreType st, final Player p) {
+	private static void addScore(final MiniGame mg, final ScoreType st, final Player p) {
 		addScore(mg, st, p, 1.0);
 	}
 
 	public static void surroundingMiniGameScoreReset(final Player player) {
-		AA_MiniGame mg = AA_MiniGameControl.getMiniGameContainingLocation(player.getLocation());
+		MiniGame mg = MiniGameLoading.getMiniGameContainingLocation(player.getLocation());
 		if (mg != null) {
-			AA_MessageSystem.sideNote("Resetting highScore for " + mg.getName(), player);
-			getHighscoreConfig().set(String.valueOf(mg.getID()), null);
-			saveHighscoreConfig();
+			MessageSystem.sideNote("Resetting highScore for " + mg.getName(), player);
+			ConfigAccess.getHighscoreConfig().set(String.valueOf(mg.getID()), null);
+			ConfigAccess.saveHighscoreConfig();
 			updateHighScoreList(mg);
 		}
 		else {
-			AA_MessageSystem.error("You are not inside a miniGame area", player);
-		}
-	}
-
-
-
-	// ################ CONFIG UTIL ##################
-
-	private static final String			HIGHSCORES_CONFIGNAME	= "highScores.yml";
-	private static File					configFile				= null;
-	private static YamlConfiguration	config					= null;
-
-	public static FileConfiguration getPluginConfig() {
-		return AdventureArena.getInstance().getConfig();
-	}
-
-	public static void savePluginConfig() {
-		AdventureArena.getInstance().saveConfig();
-	}
-
-	public static FileConfiguration getHighscoreConfig() {
-		if (config == null) {
-			File dataFolder = AdventureArena.getInstance().getDataFolder();
-			if (!dataFolder.exists()) {
-				dataFolder.mkdirs();
-			}
-			configFile = new File(dataFolder, HIGHSCORES_CONFIGNAME);
-			config = YamlConfiguration.loadConfiguration(configFile);
-		}
-		return config;
-	}
-
-	public static void saveHighscoreConfig() {
-		if (config != null) {
-			try {
-				config.save(configFile);
-			}
-			catch (IOException e) {
-				AA_MessageSystem.consoleError(HIGHSCORES_CONFIGNAME + "cannot be overwritten or created");
-				e.printStackTrace();
-			}
+			MessageSystem.error("You are not inside a miniGame area", player);
 		}
 	}
 

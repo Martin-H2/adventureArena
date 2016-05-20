@@ -12,11 +12,11 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
-import adventureArena.AA_MiniGame;
-import adventureArena.AA_TerrainHelper;
+import adventureArena.TerrainHelper;
+import adventureArena.miniGameComponents.MiniGame;
 
 
-public class PeriodicalEntityTask extends AA_PeriodicalTask {
+public class PeriodicEntityTask extends AbstractPeriodicTask {
 
 	private final World			world;
 	private final Location		airBlockAboveAttachedBlockTelePos;
@@ -24,15 +24,15 @@ public class PeriodicalEntityTask extends AA_PeriodicalTask {
 	private final double		hp;
 	private final boolean		explodeOnDeath;
 	private final double		lifeTime;
-	private final AA_MiniGame	miniGame;
+	private final MiniGame	miniGame;
 	private final List<Integer>	runningTasks;
 
 
 
-	public PeriodicalEntityTask(World w, Vector attachedBlockPosition, EntityType entityType, double hp, boolean explodeOnDeath, double lifeTime, AA_MiniGame mg, List<Integer> runningTasks) {
+	public PeriodicEntityTask(World w, Vector attachedBlockPosition, EntityType entityType, double hp, boolean explodeOnDeath, double lifeTime, MiniGame mg, List<Integer> runningTasks) {
 		super();
 		world = w;
-		airBlockAboveAttachedBlockTelePos = AA_TerrainHelper.getAirBlockAboveGroundTelePos(attachedBlockPosition.toLocation(w), true, mg);
+		airBlockAboveAttachedBlockTelePos = TerrainHelper.getAirBlockAboveGroundTelePos(attachedBlockPosition.toLocation(w), true, mg);
 		this.entityType = entityType;
 		this.hp = hp;
 		this.explodeOnDeath = explodeOnDeath;
@@ -56,7 +56,7 @@ public class PeriodicalEntityTask extends AA_PeriodicalTask {
 		}
 		if (lifeTime > 0) {
 			entity.setCustomNameVisible(true);
-			AA_PeriodicalTask explosionTimerTask = new AA_PeriodicalTask() {
+			AbstractPeriodicTask explosionTimerTask = new AbstractPeriodicTask() {
 
 				@Override
 				public void tick() {

@@ -13,6 +13,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.util.Vector;
+import adventureArena.control.TeamManager;
+import adventureArena.control.MiniGameLoading;
+import adventureArena.control.MiniGameSessions;
+import adventureArena.control.PlayerControl;
+import adventureArena.enums.HighScoreMode;
+import adventureArena.miniGameComponents.MiniGame;
+import adventureArena.miniGameComponents.SpawnEquip;
+import adventureArena.miniGameComponents.MiniGameTrigger;
 
 public class AA_SignCommand {
 
@@ -81,30 +89,30 @@ public class AA_SignCommand {
 			return false;
 		if (isCommandTimeoutForPlayer(player)) return false;
 		setCommandTimeoutForPlayer(player);
-		AA_MiniGame miniGame = AA_MiniGameControl.getMiniGameContainingLocation(signBlock.getLocation());
+		MiniGame miniGame = MiniGameLoading.getMiniGameContainingLocation(signBlock.getLocation());
 
 		if (miniGame == null) {
-			AA_MessageSystem.error("Can't find corresponding miniGame, inform admin!", player);
-			AA_MessageSystem.consoleError("Can't find corresponding miniGame: " + command + " at " + signBlock.getLocation().toVector().toString());
+			MessageSystem.error("Can't find corresponding miniGame, inform admin!", player);
+			MessageSystem.consoleError("Can't find corresponding miniGame: " + command + " at " + signBlock.getLocation().toVector().toString());
 			return false;
 		}
 
 		if (command.equals("start")) {
-			String teamName = AA_TeamManager.FFA_TEAM;
+			String teamName = TeamManager.FFA_TEAM;
 			if (parameterMap.containsKey("team")) {
 				teamName = parameterMap.get("team");
 			}
-			AA_TeamManager.doChecksAndRegisterTeam(miniGame, teamName, attachedBlock.getLocation().add(0.5, 0, 0.5), 3.8);
+			TeamManager.doChecksAndRegisterTeam(miniGame, teamName, attachedBlock.getLocation().add(0.5, 0, 0.5), 3.8);
 			return true;
 		}
 
 		if (command.equals("edit")) {
-			AA_MiniGameControl.startEditing(miniGame, player);
+			MiniGameSessions.joinEditSession(miniGame, player);
 			return true;
 		}
 
 		if (command.equals("exit")) {
-			AA_MiniGameControl.leaveCurrentMiniGame(player, false);
+			MiniGameSessions.leaveCurrentSession(player, false);
 			return true;
 		}
 
@@ -114,8 +122,9 @@ public class AA_SignCommand {
 
 
 
-	public boolean executeOnBreak(final Player breaker, final Cancellable c, final boolean isEditmode) {
-		if (!isEditmode) {
+	public boolean executeOnBreak(final Player breaker, final Cancellable c) {
+		boolean isEditMode = PlayerControl.isEditingMiniGame(breaker);
+		if (!isEditMode && !isOpBorderOperation(breaker)) {
 			if (isClickCommand()) {
 				c.setCancelled(true);
 			}
@@ -124,7 +133,7 @@ public class AA_SignCommand {
 		if (!commands.contains(command))
 			return false;
 
-		AA_MiniGame miniGame = AA_MiniGameControl.getMiniGameContainingLocation(signBlock.getLocation());
+		MiniGame miniGame = MiniGameLoading.getMiniGameContainingLocation(signBlock.getLocation());
 
 		if (!breaker.isOp() && isOpOnlyCommand()) {
 			failAndCancel(breaker, "Only Op can remove " + highlightColor() + command, c);
@@ -146,7 +155,7 @@ public class AA_SignCommand {
 		if (command.equals("border")) {
 			int id = Integer.parseInt(parameterMap.get("id"));
 			if (miniGame == null) {
-				miniGame = AA_MiniGame.loadFromConfig(id);
+				miniGame = MiniGame.loadFromConfig(id);
 			}
 			if (miniGame == null) {
 				failAndCancel(breaker, "Can't find corresponding miniGame #" + id, c);
@@ -161,7 +170,7 @@ public class AA_SignCommand {
 		}
 		else if (command.equals("spawnEquip")) {
 			miniGame.removeSpawnEquipBySignPos(signBlock.getLocation().toVector());
-			AA_MessageSystem.success("(" + miniGame.getSpawnEquipDefinitions().size() + "x SpawnEquip left)", breaker);
+			MessageSystem.success("(" + miniGame.getSpawnEquipDefinitions().size() + "x SpawnEquip left)", breaker);
 		}
 		else if (command.equals("@distance") || command.equals("@start")) {
 			miniGame.removeMonsterTriggerBySignPos(signBlock.getLocation().toVector());
@@ -172,15 +181,15 @@ public class AA_SignCommand {
 				teamName = parameterMap.get("team");
 			}
 			else {
-				teamName = AA_TeamManager.FFA_TEAM;
+				teamName = TeamManager.FFA_TEAM;
 			}
 			miniGame.removeSpawnPoint(teamName, attachedBlock.getLocation());
-			AA_MessageSystem.success("(" + miniGame.getNumberOfSpawnPoints() + " SpawnPoints left)", breaker);
+			MessageSystem.success("(" + miniGame.getNumberOfSpawnPoints() + " SpawnPoints left)", breaker);
 		}
 		else if (command.equals("highScore")) {
 			if (miniGame == null) {
 				int id = Integer.parseInt(parameterMap.get("id"));
-				miniGame = AA_MiniGameControl.getMiniGame(id);
+				miniGame = MiniGameLoading.getMiniGame(id);
 				if (miniGame == null)
 					return false;
 			}
@@ -191,11 +200,12 @@ public class AA_SignCommand {
 
 		if (miniGame != null && miniGame.needsPersisting()) {
 			miniGame.persist();
-			AA_MessageSystem.success("Removed " + command + " from config for miniGame #" + miniGame.getID(), breaker);
+			MessageSystem.success("Removed " + command + " from config for miniGame #" + miniGame.getID(), breaker);
 			return true;
 		}
 		return false;
 	}
+
 
 
 	@SuppressWarnings ("deprecation")
@@ -206,7 +216,7 @@ public class AA_SignCommand {
 			return false;
 		}
 
-		AA_MiniGame miniGame = AA_MiniGameControl.getMiniGameContainingLocation(signBlock.getLocation());
+		MiniGame miniGame = MiniGameLoading.getMiniGameContainingLocation(signBlock.getLocation());
 
 		if (optionalCreator != null && !optionalCreator.isOp() && isOpOnlyCommand()) {
 			failAndBreak(optionalCreator, "Only Op can set " + highlightColor() + command);
@@ -233,11 +243,11 @@ public class AA_SignCommand {
 		if (command.equals("border") && validateStringParamater(optionalCreator, "corner", "nwl", "seu") & validateIntParamater(optionalCreator, "id", 0, Integer.MAX_VALUE)) {
 			int id = Integer.parseInt(parameterMap.get("id"));
 			if (miniGame == null) {
-				miniGame = AA_MiniGameControl.getMiniGame(id);
+				miniGame = MiniGameLoading.getMiniGame(id);
 			}
 			if (miniGame == null) {
-				miniGame = new AA_MiniGame(id, world);
-				AA_MiniGameControl.addMiniGame(miniGame);
+				miniGame = new MiniGame(id, world);
+				MiniGameLoading.addMiniGame(miniGame);
 			}
 			Vector signBlockVectorLoc = signBlock.getLocation().toVector();
 			if (parameterMap.get("corner").equals("nwl")) {
@@ -261,7 +271,7 @@ public class AA_SignCommand {
 			if (miniGame == null) {
 				if (validateIntParamater(optionalCreator, "id", 0, Integer.MAX_VALUE)) {
 					int id = Integer.parseInt(parameterMap.get("id"));
-					miniGame = AA_MiniGameControl.getMiniGame(id);
+					miniGame = MiniGameLoading.getMiniGame(id);
 					if (miniGame == null) {
 						failAndBreak(optionalCreator, "No miniGame found with id: " + id);
 						return false;
@@ -281,13 +291,13 @@ public class AA_SignCommand {
 			miniGame.setName(parameterMap.get("name"));
 			miniGame.setPvpDamage(!parameterMap.get("pvpDamage").equals("0"));
 			if (parameterMap.get("scoreMode").equals("kd")) {
-				miniGame.setScoreMode(ScoreMode.KillsPerDeath);
+				miniGame.setScoreMode(HighScoreMode.KillsPerDeath);
 			}
 			else if (parameterMap.get("scoreMode").equals("lms")) {
-				miniGame.setScoreMode(ScoreMode.LastManStanding);
+				miniGame.setScoreMode(HighScoreMode.LastManStanding);
 			}
 			else if (parameterMap.get("scoreMode").equals("cmd")) {
-				miniGame.setScoreMode(ScoreMode.ScoreByCommand);
+				miniGame.setScoreMode(HighScoreMode.ScoreByCommand);
 			}
 		}
 		else if (command.equals("spawnEquip")) {
@@ -307,7 +317,7 @@ public class AA_SignCommand {
 			for (Entry<String, String> entry: parameterMap.entrySet()) {
 				if (lineIndex == 0) {
 					String itemName = entry.getKey();
-					itemMaterial = AA_Util.getEnumStartingWith(itemName, Material.class);
+					itemMaterial = Util.getEnumStartingWith(itemName, Material.class);
 					if (itemMaterial == null) {
 						failAndBreak(optionalCreator, "1st line needs to be an " + ultraHighlightColor() + "ItemId:amount" + errorColor() + "pair");
 						failAndBreak(optionalCreator, "Unknown item ID: " + highlightColor() + itemName + errorColor() + ", see all IDs here: " + MATERIAL_IDS_HELP);
@@ -320,7 +330,7 @@ public class AA_SignCommand {
 				}
 				if (entry.getKey().equals("for")) {
 					String itemName = entry.getValue();
-					targetMaterial = AA_Util.getEnumStartingWith(itemName, Material.class);
+					targetMaterial = Util.getEnumStartingWith(itemName, Material.class);
 					if (targetMaterial == null) {
 						failAndBreak(optionalCreator, "Unknown item ID: " + highlightColor() + itemName + errorColor() + ", see all IDs here: " + MATERIAL_IDS_HELP);
 						failAndBreak(optionalCreator, "see documentation: " + WIKI_HELP);
@@ -349,7 +359,7 @@ public class AA_SignCommand {
 						}
 						catch (Exception e1) {
 							if (optionalCreator != null) {
-								AA_MessageSystem.sideNote("no enchant level, assuming 1.", optionalCreator);
+								MessageSystem.sideNote("no enchant level, assuming 1.", optionalCreator);
 							}
 						}
 					}
@@ -359,17 +369,17 @@ public class AA_SignCommand {
 
 			if (failed) {
 				if (optionalCreator != null) {
-					AA_MessageSystem.example("  [spawnEquip]", optionalCreator);
-					AA_MessageSystem.example(" dia_pickaxe:1", optionalCreator);
-					AA_MessageSystem.example(" for:redstone_b", optionalCreator);
-					AA_MessageSystem.example(" ench:32 5", optionalCreator);
-					AA_MessageSystem.sideNote("(dia_ is short for diamond_)", optionalCreator);
-					AA_MessageSystem.sideNote("(_b is short for _block)", optionalCreator);
+					MessageSystem.example("  [spawnEquip]", optionalCreator);
+					MessageSystem.example(" dia_pickaxe:1", optionalCreator);
+					MessageSystem.example(" for:redstone_b", optionalCreator);
+					MessageSystem.example(" ench:32 5", optionalCreator);
+					MessageSystem.sideNote("(dia_ is short for diamond_)", optionalCreator);
+					MessageSystem.sideNote("(_b is short for _block)", optionalCreator);
 				}
 				return false;
 			}
 			else {
-				miniGame.addSpawnEquipDefinition(new AA_SpawnEquip(signBlock.getLocation().toVector(), itemMaterial, targetMaterial, amount, ench, enchLevel));
+				miniGame.addSpawnEquipDefinition(new SpawnEquip(signBlock.getLocation().toVector(), itemMaterial, targetMaterial, amount, ench, enchLevel));
 			}
 
 		}
@@ -379,7 +389,7 @@ public class AA_SignCommand {
 				teamName = parameterMap.get("team");
 			}
 			else {
-				teamName = AA_TeamManager.FFA_TEAM;
+				teamName = TeamManager.FFA_TEAM;
 			}
 			miniGame.addSpawnPoint(teamName, attachedBlock.getLocation());
 		}
@@ -405,12 +415,12 @@ public class AA_SignCommand {
 				boolean isPerPlayerCount = false;
 				int newScore = -1;
 				if (parameterMap.containsKey("setScore")) {
-					if (optionalCreator != null && miniGame.getScoreMode() != ScoreMode.ScoreByCommand) {
+					if (optionalCreator != null && miniGame.getScoreMode() != HighScoreMode.ScoreByCommand) {
 						optionalCreator.sendMessage(ChatColor.RED + "[WARNING] score set by sign is only displayed on highScore lists when scoreMode:cmd under [settings]");
 					}
 					if (!validateIntParamater(optionalCreator, "setScore", 0, 999)) return false;
 					newScore = Integer.parseInt(parameterMap.get("setScore"));
-					AA_BlockTrigger mt = new AA_BlockTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, newScore);
+					MiniGameTrigger mt = new MiniGameTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, newScore);
 					miniGame.addMonsterTrigger(mt);
 				}
 				else {
@@ -438,8 +448,8 @@ public class AA_SignCommand {
 						parameterMap.remove("count");
 					}
 					for (String spawnedObject: parameterMap.keySet()) {
-						EntityType entityType = AA_Util.getEnumStartingWith(spawnedObject, EntityType.class);
-						Material blockType = AA_Util.getEnumStartingWith(spawnedObject, Material.class);
+						EntityType entityType = Util.getEnumStartingWith(spawnedObject, EntityType.class);
+						Material blockType = Util.getEnumStartingWith(spawnedObject, Material.class);
 						if (entityType == null && blockType == null) {
 							failAndBreak(optionalCreator, "Unknown entity/block name: " + highlightColor() + spawnedObject + errorColor() + ", see all entity names here: " + ENTITY_IDS_HELP);
 							failAndBreak(optionalCreator, "and block names here: " + MATERIAL_IDS_HELP + " (both is possible, prefix suffices");
@@ -452,12 +462,12 @@ public class AA_SignCommand {
 						if (hpLifeTime.length == 2) {
 							lifeTime = Double.parseDouble(hpLifeTime[1]);
 						}
-						AA_BlockTrigger mt;
+						MiniGameTrigger mt;
 						if (entityType != null) {
-							mt = new AA_BlockTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, entityType);
+							mt = new MiniGameTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, entityType);
 						}
 						else {
-							mt = new AA_BlockTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, blockType);
+							mt = new MiniGameTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, blockType);
 						}
 						mt.setDelay(delay);
 						mt.setDelayRndRange(delayRngRange);
@@ -473,13 +483,13 @@ public class AA_SignCommand {
 			catch (Exception e) {
 				failAndBreak(optionalCreator, "see documentation: " + WIKI_HELP);
 				if (optionalCreator != null) {
-					AA_MessageSystem.example("  [" + (command.equals("@distance") ? "@distance:5" : "@start") + "]", optionalCreator);
-					AA_MessageSystem.example(" delay:3-7   " + ChatColor.DARK_GRAY + "(optional)", optionalCreator);
-					AA_MessageSystem.example(" zombie:100,10   (or setScore:75)", optionalCreator);
-					AA_MessageSystem.example(" explode:1", optionalCreator);
-					AA_MessageSystem.sideNote("where 100=hp and 10=lifeTime", optionalCreator);
-					AA_MessageSystem.sideNote("Entity names here: " + ENTITY_IDS_HELP, optionalCreator);
-					AA_MessageSystem.sideNote("Block names here: " + MATERIAL_IDS_HELP, optionalCreator);
+					MessageSystem.example("  [" + (command.equals("@distance") ? "@distance:5" : "@start") + "]", optionalCreator);
+					MessageSystem.example(" delay:3-7   " + ChatColor.DARK_GRAY + "(optional)", optionalCreator);
+					MessageSystem.example(" zombie:100,10   (or setScore:75)", optionalCreator);
+					MessageSystem.example(" explode:1", optionalCreator);
+					MessageSystem.sideNote("where 100=hp and 10=lifeTime", optionalCreator);
+					MessageSystem.sideNote("Entity names here: " + ENTITY_IDS_HELP, optionalCreator);
+					MessageSystem.sideNote("Block names here: " + MATERIAL_IDS_HELP, optionalCreator);
 				}
 				//e.printStackTrace();
 				return false;
@@ -490,10 +500,10 @@ public class AA_SignCommand {
 		if (miniGame != null && miniGame.needsPersisting()) {
 			miniGame.persist();
 			if (optionalCreator != null) {
-				AA_MessageSystem.success("Added " + command + " to config for miniGame #" + miniGame.getID(), optionalCreator);
+				MessageSystem.success("Added " + command + " to config for miniGame #" + miniGame.getID(), optionalCreator);
 			}
 			else {
-				AA_MessageSystem.consoleDebug("Added " + command + " to config for miniGame #" + miniGame.getID() + " @" + signBlock.getLocation().toVector());
+				MessageSystem.consoleDebug("Added " + command + " to config for miniGame #" + miniGame.getID() + " @" + signBlock.getLocation().toVector());
 			}
 			return true;
 		}
@@ -512,6 +522,10 @@ public class AA_SignCommand {
 
 	public boolean isClickCommand() {
 		return command.equals("start") || command.equals("edit") || command.equals("exit");
+	}
+
+	private boolean isOpBorderOperation(Player player) {
+		return command.equals("border") && player.isOp();
 	}
 
 	private boolean validateStringParamater(final Player executor, final String param, final String... possibleValues) {
@@ -559,22 +573,22 @@ public class AA_SignCommand {
 	private void failAndBreak(final Player executor, final String message) {
 		failed = true;
 		if (executor != null) {
-			AA_MessageSystem.error(message, executor);
+			MessageSystem.error(message, executor);
 			signBlock.breakNaturally();
 		}
 		else {
-			AA_MessageSystem.consoleError(message);
+			MessageSystem.consoleError(message);
 		}
 	}
 
 	private void failAndCancel(final Player executor, final String message, final Cancellable c) {
 		failed = true;
-		AA_MessageSystem.error(message, executor);
+		MessageSystem.error(message, executor);
 		c.setCancelled(true);
 	}
 
 	private static String errorColor() {
-		return AA_MessageSystem.getErrorColor();
+		return MessageSystem.getErrorColor();
 	}
 
 	private static String highlightColor() {
@@ -622,7 +636,7 @@ public class AA_SignCommand {
 						}
 						else {
 							if (line.length() > 0 && optionalStylingLoopback != null) {
-								AA_MessageSystem.error("Invalid parameter line (" + line + "), format is" + ultraHighlightColor() + " key:value", optionalStylingLoopback.getPlayer());
+								MessageSystem.error("Invalid parameter line (" + line + "), format is" + ultraHighlightColor() + " key:value", optionalStylingLoopback.getPlayer());
 							}
 						}
 					}

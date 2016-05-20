@@ -3,7 +3,7 @@ package adventureArena;
 import java.util.*;
 import java.util.Map.Entry;
 
-public class AA_Util {
+public class Util {
 
 	public static <K, V extends Comparable<V>> List<Entry<K, V>> sortByValue(final Map<K, V> map, final boolean ascending) {
 		List<Entry<K, V>> entries = new ArrayList<Entry<K, V>>(map.entrySet());

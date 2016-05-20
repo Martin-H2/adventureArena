@@ -3,6 +3,8 @@ package adventureArena;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
+import adventureArena.control.PlayerControl;
+import adventureArena.miniGameComponents.MiniGame;
 import com.connorlinfoot.actionbarapi.ActionBarAPI;
 import com.connorlinfoot.titleapi.TitleAPI;
 
@@ -28,7 +30,7 @@ public class AA_OnScreenMessages {
 	}
 
 
-	public static void sendPvpKillMessages(Player killer, Player victim, double killerRating, double newKillerRating, double victimRating, double newVictimRating, AA_MiniGame mg) {
+	public static void sendPvpKillMessages(Player killer, Player victim, double killerRating, double newKillerRating, double victimRating, double newVictimRating, MiniGame mg) {
 		String killerMessage = ChatColor.DARK_GREEN + "You killed " + ChatColor.GREEN + victim.getName();
 		String killerSub = ChatColor.GRAY + String.format("  (stealing %.0f rating)", newKillerRating - killerRating);
 		String victimMessage = ChatColor.RED + killer.getName() + ChatColor.DARK_RED + " killed you";
@@ -41,7 +43,7 @@ public class AA_OnScreenMessages {
 
 		for (Player p: mg.getPlayersInArea()) {
 			if (!p.equals(victim) && !p.equals(killer)) {
-				if (AA_MiniGameControl.isPlayingMiniGame(p)) {
+				if (PlayerControl.isPlayingMiniGame(p)) {
 					sendSubtitle(p, 0.5, 1.5, 1.0, othersMessage);
 				}
 				else {
@@ -52,7 +54,7 @@ public class AA_OnScreenMessages {
 	}
 
 
-	public static void sendGameWonMessage(AA_MiniGame mg, Player p) {
+	public static void sendGameWonMessage(MiniGame mg, Player p) {
 		sendTitleAndSubtitle(p, 0.5, 4.5, 1.0,
 				ChatColor.GREEN + "You won '" + mg.getName() + "'",
 				ChatColor.DARK_GREEN + String.format("Your new rating is %.0f", AA_ScoreManager.getHighScoreRating(mg, p)));

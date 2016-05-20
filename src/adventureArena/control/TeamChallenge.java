@@ -1,15 +1,15 @@
-package adventureArena;
+package adventureArena.control;
 
 import java.util.ArrayList;
 
 import org.bukkit.entity.Player;
 
-public class AA_TeamChallenge {
+public class TeamChallenge {
 
 	private final String teamName;
 	final ArrayList<Player> players;
 
-	public AA_TeamChallenge(final String teamName) {
+	public TeamChallenge(final String teamName) {
 		this.teamName = teamName;
 		players = new ArrayList<Player>();
 	}
@@ -29,8 +29,8 @@ public class AA_TeamChallenge {
 
 	@Override
 	public boolean equals(final Object obj) {
-		if (!(obj instanceof AA_TeamChallenge)) return false;
-		return teamName.equals(((AA_TeamChallenge)obj).teamName);
+		if (!(obj instanceof TeamChallenge)) return false;
+		return teamName.equals(((TeamChallenge)obj).teamName);
 	}
 
 	@Override

@@ -11,25 +11,26 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
 import org.bukkit.util.Vector;
+import adventureArena.miniGameComponents.MiniGame;
 import com.sk89q.worldedit.CuboidClipboard;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.bukkit.BukkitWorld;
 
 @SuppressWarnings ("deprecation")
-public class AA_TerrainHelper {
+public class TerrainHelper {
 
 
 
-	public static Location getAirBlockAboveGroundTelePos(final Location start, final boolean searchUpwards, AA_MiniGame mg) {
+	public static Location getAirBlockAboveGroundTelePos(final Location start, final boolean searchUpwards, MiniGame mg) {
 		return getAirBlockAboveGround(start.getBlock(), searchUpwards, mg).getLocation().add(0.5, 0, 0.5);
 	}
 
-	public static Block getAirBlockAboveGround(final Location start, final boolean searchUpwards, AA_MiniGame mg) {
+	public static Block getAirBlockAboveGround(final Location start, final boolean searchUpwards, MiniGame mg) {
 		return getAirBlockAboveGround(start.getBlock(), searchUpwards, mg);
 	}
 
-	static Block getAirBlockAboveGround(final Block start, final boolean searchUpwards, AA_MiniGame mg) {
+	public static Block getAirBlockAboveGround(final Block start, final boolean searchUpwards, MiniGame mg) {
 		BlockFace searchDirection = searchUpwards ? BlockFace.UP : BlockFace.DOWN;
 		Block block = start.getRelative(searchDirection);
 		while (mg.isInsidePlayableBounds(block.getLocation())) {
@@ -92,7 +93,7 @@ public class AA_TerrainHelper {
 
 	public static boolean saveMiniGameToSchematic(final Vector northWestMin, final Vector southEastMax, final int id, final World world) {
 		//TODO ? save & load async
-		File file = getMiniGameFile(id);
+		File file = getMiniGameSchematicFile(id);
 		int specRoomHeight = 2; //TODO ? dynamic spec room height
 		com.sk89q.worldedit.Vector min = new com.sk89q.worldedit.Vector(northWestMin.getX(), northWestMin.getY(), northWestMin.getZ());
 		com.sk89q.worldedit.Vector max = new com.sk89q.worldedit.Vector(southEastMax.getX(), southEastMax.getY() - specRoomHeight, southEastMax.getZ());
@@ -111,7 +112,7 @@ public class AA_TerrainHelper {
 	}
 
 	public static boolean loadMinigameFromSchematic(final int id, final World world) {
-		File file = getMiniGameFile(id);
+		File file = getMiniGameSchematicFile(id);
 		EditSession es = new EditSession(new BukkitWorld(world), -1);
 		es.enableQueue();
 		es.setFastMode(true);
@@ -131,7 +132,7 @@ public class AA_TerrainHelper {
 
 
 
-	private static File getMiniGameFile(final int id) {
+	private static File getMiniGameSchematicFile(final int id) {
 		File miniGameSchemFolder = new File(AdventureArena.getInstance().getDataFolder(), "miniGameSchematics");
 		if (!miniGameSchemFolder.exists()) {
 			miniGameSchemFolder.mkdirs();
@@ -148,7 +149,7 @@ public class AA_TerrainHelper {
 		return mgf;
 	}
 
-	public static void resetMiniGameRoom(AA_MiniGame mg) {
+	public static void resetMiniGameRoom(MiniGame mg) {
 		Block block;
 		World world = mg.getWorld();
 		for (int x = mg.getNorthWestMin().getBlockX(); x <= mg.getSouthEastMax().getBlockX(); x++) {
@@ -170,7 +171,7 @@ public class AA_TerrainHelper {
 		}
 	}
 
-	public static void fixSigns(AA_MiniGame mg) {
+	public static void fixSigns(MiniGame mg) {
 		Block block;
 		World world = mg.getWorld();
 		for (int x = mg.getNorthWestMin().getBlockX(); x <= mg.getSouthEastMax().getBlockX(); x++) {
