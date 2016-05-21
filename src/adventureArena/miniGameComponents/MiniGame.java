@@ -11,9 +11,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 import adventureArena.*;
-import adventureArena.control.TeamManager;
 import adventureArena.control.MiniGameLoading;
 import adventureArena.control.PlayerControl;
+import adventureArena.control.TeamManager;
 import adventureArena.enums.ConfigPaths;
 import adventureArena.enums.HighScoreMode;
 import adventureArena.enums.ScoreType;
@@ -265,17 +265,17 @@ public class MiniGame {
 		needsPersisting = true;
 	}
 
-	public void addMonsterTrigger(final MiniGameTrigger monsterTrigger) {
-		if (monsterTrigger.isSpawnTrigger()) {
-			startTriggers.add(monsterTrigger);
+	public void addTrigger(final MiniGameTrigger trigger) {
+		if (trigger.isStartTrigger()) {
+			startTriggers.add(trigger);
 		}
 		else {
-			rangedTriggers.add(monsterTrigger);
+			rangedTriggers.add(trigger);
 		}
 		needsPersisting = true;
 	}
 
-	public void removeMonsterTriggerBySignPos(final Vector monsterTriggerSignPos) {
+	public void removeTriggerBySignPos(final Vector monsterTriggerSignPos) {
 		for (Iterator<MiniGameTrigger> iter = startTriggers.iterator(); iter.hasNext();) {
 			MiniGameTrigger mt = iter.next();
 			if (monsterTriggerSignPos.equals(mt.getSignPos())) {
@@ -292,12 +292,18 @@ public class MiniGame {
 		}
 	}
 
-	public List<MiniGameTrigger> getRangedMonsterTriggers() {
+	public List<MiniGameTrigger> getRangedTriggers() {
 		return rangedTriggers;
 	}
 
 	public List<MiniGameTrigger> getStartTriggers() {
 		return startTriggers;
+	}
+
+	public void runStartTriggers() {
+		for (MiniGameTrigger mt: getStartTriggers()) {
+			mt.checkAndTrigger(getWorld(), this);
+		}
 	}
 
 	public List<SpawnEquip> getSpawnEquipDefinitions() {
@@ -379,7 +385,7 @@ public class MiniGame {
 		needsPersisting = true;
 	}
 
-	public void removeHighScoreSignLocation(final Vector v) {
+	public void unRegisterHighScoreSignLocation(final Vector v) {
 		highScoreSignLocations.remove(v);
 		needsPersisting = true;
 	}

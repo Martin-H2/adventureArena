@@ -173,7 +173,7 @@ public class AA_SignCommand {
 			MessageSystem.success("(" + miniGame.getSpawnEquipDefinitions().size() + "x SpawnEquip left)", breaker);
 		}
 		else if (command.equals("@distance") || command.equals("@start")) {
-			miniGame.removeMonsterTriggerBySignPos(signBlock.getLocation().toVector());
+			miniGame.removeTriggerBySignPos(signBlock.getLocation().toVector());
 		}
 		else if (command.equals("spawn")) {
 			String teamName;
@@ -421,7 +421,7 @@ public class AA_SignCommand {
 					if (!validateIntParamater(optionalCreator, "setScore", 0, 999)) return false;
 					newScore = Integer.parseInt(parameterMap.get("setScore"));
 					MiniGameTrigger mt = new MiniGameTrigger(signBlock.getLocation().toVector(), attachedBlock.getLocation().toVector(), command.equals("@start"), radius, newScore);
-					miniGame.addMonsterTrigger(mt);
+					miniGame.addTrigger(mt);
 				}
 				else {
 					if (parameterMap.containsKey("delay")) {
@@ -476,7 +476,7 @@ public class AA_SignCommand {
 						mt.setPerPlayerCount(isPerPlayerCount);
 						mt.setLifeTime(lifeTime);
 						mt.setExplodeOnDeath(explode);
-						miniGame.addMonsterTrigger(mt);
+						miniGame.addTrigger(mt);
 					}
 				}
 			}

@@ -75,8 +75,9 @@ public class TeamManager {
 					MessageSystem.errorToGroup("Team-challenge pending, use team entrance.", playersAroundSign);
 				}
 				else {
-					MiniGameSessions.prepareSession(miniGame, true);
+					MiniGameSessions.prepareSession(miniGame);
 					spawnTeam(miniGame, teamName, playersAroundSign);
+					miniGame.runStartTriggers();
 				}
 				return;
 			}
@@ -93,11 +94,12 @@ public class TeamManager {
 						if (challengingTeamsForThisMiniGame.size() > 1) {
 							// START GAME NOW !
 							if (MiniGameSessions.canJoinMiniGame(miniGame, getAllChallengersFor(miniGame))) {
-								MiniGameSessions.prepareSession(miniGame, true);
+								MiniGameSessions.prepareSession(miniGame);
 								for (String teamName: challengingTeamsForThisMiniGame.keySet()) {
 									TeamChallenge team = challengingTeamsForThisMiniGame.get(teamName);
 									TeamManager.spawnTeam(miniGame, team.getTeamName(), team.getPlayers());
 								}
+								miniGame.runStartTriggers();
 							}
 						}
 						else {

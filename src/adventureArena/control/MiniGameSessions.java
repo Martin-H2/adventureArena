@@ -13,20 +13,14 @@ import adventureArena.*;
 import adventureArena.enums.ConfigPaths;
 import adventureArena.enums.PlayerState;
 import adventureArena.miniGameComponents.MiniGame;
-import adventureArena.miniGameComponents.MiniGameTrigger;
 
 public class MiniGameSessions {
 
 
 
-	public static void prepareSession(MiniGame miniGame, boolean isPlaySession) {
+	public static void prepareSession(MiniGame miniGame) {
 		miniGame.wipeEntities();
 		miniGame.restoreEnvironmentBackup();
-		if (isPlaySession) {
-			for (MiniGameTrigger mt: miniGame.getStartTriggers()) {
-				mt.checkAndTrigger(miniGame.getWorld(), miniGame);
-			}
-		}
 	}
 
 	static void joinPlaySession(final MiniGame miniGame, final String teamName, final Player p, final Vector spawnPoint) {
@@ -59,7 +53,7 @@ public class MiniGameSessions {
 			// START EDITING NOW
 			if (!miniGame.isLockedByEditSession()) {
 				// 1st editor comes in
-				prepareSession(miniGame, false);
+				prepareSession(miniGame);
 			}
 			Block target = TerrainHelper.getAirBlockAboveGround(player.getLocation().getBlock().getRelative(BlockFace.DOWN, 3), false, miniGame);
 			player.setBedSpawnLocation(miniGame.getSpectatorRespawnPoint(), true);

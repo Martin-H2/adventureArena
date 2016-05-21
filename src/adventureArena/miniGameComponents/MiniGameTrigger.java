@@ -9,8 +9,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import adventureArena.AA_ScoreManager;
 import adventureArena.AdventureArena;
-import adventureArena.tasks.PeriodicEntityTask;
 import adventureArena.tasks.AbstractPeriodicTask;
+import adventureArena.tasks.PeriodicEntityTask;
 import adventureArena.tasks.TimedBlockTask;
 
 
@@ -19,7 +19,7 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 
 	private final Vector		signPosition;
 	private final Vector		attachedBlockPosition;
-	private final boolean		isSpawnTrigger;
+	private final boolean		isStartTrigger;
 	private final double		radius;
 
 	//#### OPTIONAL ####
@@ -42,29 +42,29 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 
 
 	//#### OBJ LC ####
-	public MiniGameTrigger(final Vector signPosition, final Vector attachedBlockPosition, final boolean isSpawnTrigger, final double radius, final EntityType entityType) {
+	public MiniGameTrigger(final Vector signPosition, final Vector attachedBlockPosition, final boolean isStartTrigger, final double radius, final EntityType entityType) {
 		super();
 		this.signPosition = signPosition;
 		this.attachedBlockPosition = attachedBlockPosition;
-		this.isSpawnTrigger = isSpawnTrigger;
+		this.isStartTrigger = isStartTrigger;
 		this.radius = radius;
 		this.entityType = entityType;
 	}
 
-	public MiniGameTrigger(final Vector signPosition, final Vector attachedBlockPosition, final boolean isSpawnTrigger, final double radius, final Material blockType) {
+	public MiniGameTrigger(final Vector signPosition, final Vector attachedBlockPosition, final boolean isStartTrigger, final double radius, final Material blockType) {
 		super();
 		this.signPosition = signPosition;
 		this.attachedBlockPosition = attachedBlockPosition;
-		this.isSpawnTrigger = isSpawnTrigger;
+		this.isStartTrigger = isStartTrigger;
 		this.radius = radius;
 		this.blockType = blockType;
 	}
 
-	public MiniGameTrigger(final Vector signPosition, final Vector attachedBlockPosition, final boolean isSpawnTrigger, final double radius, final int newScore) {
+	public MiniGameTrigger(final Vector signPosition, final Vector attachedBlockPosition, final boolean isStartTrigger, final double radius, final int newScore) {
 		super();
 		this.signPosition = signPosition;
 		this.attachedBlockPosition = attachedBlockPosition;
-		this.isSpawnTrigger = isSpawnTrigger;
+		this.isStartTrigger = isStartTrigger;
 		this.radius = radius;
 		this.newScore = newScore;
 	}
@@ -72,7 +72,7 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 	public MiniGameTrigger(final Map<String, Object> serializedForm) {
 		signPosition = (Vector) serializedForm.get("signPosition");
 		attachedBlockPosition = (Vector) serializedForm.get("attachedBlockPosition");
-		isSpawnTrigger = (boolean) serializedForm.get("isSpawnTrigger");
+		isStartTrigger = (boolean) serializedForm.get("isSpawnTrigger");
 		radius = (double) serializedForm.get("radius");
 		entityType = EntityType.valueOf((String) serializedForm.get("entityType"));
 		if (serializedForm.containsKey("blockType")) {
@@ -97,7 +97,7 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 		Map<String, Object> serializedForm = new HashMap<String, Object>();
 		serializedForm.put("signPosition", signPosition);
 		serializedForm.put("attachedBlockPosition", attachedBlockPosition);
-		serializedForm.put("isSpawnTrigger", isSpawnTrigger);
+		serializedForm.put("isSpawnTrigger", isStartTrigger);
 		serializedForm.put("radius", radius);
 		serializedForm.put("entityType", entityType.toString());
 		serializedForm.put("blockType", blockType.toString());
@@ -153,7 +153,17 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 	private void triggerSpawn(final World w, final MiniGame mg) {
 		hasGlobalCd = true;
 
-		if (blockType == Material.AIR) {
+		if (blockType != Material.AIR) {
+			// SPAWN BLOCKS
+			Runnable spawnTask = new TimedBlockTask(w, attachedBlockPosition, blockType, hp, explodeOnDeath, lifeTime, mg, runningTasks, count);
+			if (delay <= 0) {
+				spawnTask.run();
+			}
+			else {
+				runningTasks.add(AdventureArena.executeDelayed(delay, spawnTask));
+			}
+		}
+		else {
 			// SPAWN ENTITIES
 			AbstractPeriodicTask spawnTask = new PeriodicEntityTask(w, attachedBlockPosition, entityType, hp, explodeOnDeath, lifeTime, mg, runningTasks);
 			if (delay <= 0 && count == 1) {
@@ -163,16 +173,6 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 				int finalCount = count * (isPerPlayerCount ? mg.getNumberOfPlayersRemaining() : 1);
 				spawnTask.schedule(delay + rnd.nextDouble() * delayRndRange, 1.0, finalCount);
 				runningTasks.add(spawnTask.getTaskId());
-			}
-		}
-		else {
-			// SPAWN BLOCKS
-			Runnable spawnTask = new TimedBlockTask(w, attachedBlockPosition, blockType, hp, explodeOnDeath, lifeTime, mg, runningTasks, count);
-			if (delay <= 0) {
-				spawnTask.run();
-			}
-			else {
-				runningTasks.add(AdventureArena.executeDelayed(delay, spawnTask));
 			}
 		}
 
@@ -207,8 +207,8 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 		this.lifeTime = lifeTime;
 	}
 
-	public boolean isSpawnTrigger() {
-		return isSpawnTrigger;
+	public boolean isStartTrigger() {
+		return isStartTrigger;
 	}
 
 	public Vector getSignPos() {
@@ -245,7 +245,7 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 
 	@Override
 	public String toString() {
-		return "MiniGameTrigger [isSpawnTrigger=" + isSpawnTrigger
+		return "MiniGameTrigger [isSpawnTrigger=" + isStartTrigger
 			+ ", radius=" + radius + ", entityType=" + entityType
 			+ ", delay=" + delay + ", delayRndRange=" + delayRndRange
 			+ ", hp=" + hp + ", lifeTime=" + lifeTime + ", hasGlobalCd="

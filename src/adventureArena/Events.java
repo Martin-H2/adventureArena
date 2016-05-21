@@ -56,7 +56,7 @@ public class Events implements Listener {
 		if (PlayerControl.isPlayingMiniGame(player)) {
 			MiniGame mg = MiniGameLoading.getMiniGameForPlayer(player);
 			if (mg != null) {
-				for (MiniGameTrigger mt: mg.getRangedMonsterTriggers()) {
+				for (MiniGameTrigger mt: mg.getRangedTriggers()) {
 					//AA_MessageSystem.consoleDebug("TRIGGER: " + mt);
 					mt.checkRangeAndTrigger(player, mg);
 				}
