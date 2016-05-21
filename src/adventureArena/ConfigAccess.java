@@ -23,11 +23,11 @@ public class ConfigAccess {
 
 
 	public static FileConfiguration getPluginConfig() {
-		return AdventureArena.getInstance().getConfig();
+		return PluginManagement.getInstance().getConfig();
 	}
 
 	public static void savePluginConfig() {
-		AdventureArena.getInstance().saveConfig();
+		PluginManagement.getInstance().saveConfig();
 	}
 
 
@@ -99,7 +99,7 @@ public class ConfigAccess {
 
 
 	static File getConfigFolder() {
-		File dataFolder = AdventureArena.getInstance().getDataFolder();
+		File dataFolder = PluginManagement.getInstance().getDataFolder();
 		if (!dataFolder.exists()) {
 			dataFolder.mkdirs();
 		}

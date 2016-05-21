@@ -8,7 +8,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import adventureArena.AA_ScoreManager;
-import adventureArena.AdventureArena;
+import adventureArena.PluginManagement;
 import adventureArena.tasks.AbstractPeriodicTask;
 import adventureArena.tasks.PeriodicEntityTask;
 import adventureArena.tasks.TimedBlockTask;
@@ -136,7 +136,7 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 	public void reset() {
 		hasGlobalCd = false;
 		for (int id: runningTasks) {
-			AdventureArena.cancelTask(id);
+			PluginManagement.cancelTask(id);
 		}
 		runningTasks.clear();
 	}
@@ -160,7 +160,7 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 				spawnTask.run();
 			}
 			else {
-				runningTasks.add(AdventureArena.executeDelayed(delay, spawnTask));
+				runningTasks.add(PluginManagement.executeDelayed(delay, spawnTask));
 			}
 		}
 		else {

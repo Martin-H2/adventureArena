@@ -61,7 +61,7 @@ public class AA_SignCommand {
 
 	private static void setCommandTimeoutForPlayer(final Player player) {
 		playersWithCommandTimeout.add(player.getUniqueId());
-		AdventureArena.executeDelayed(PLAYER_COMMAND_DELAY_SEC, new Runnable() {
+		PluginManagement.executeDelayed(PLAYER_COMMAND_DELAY_SEC, new Runnable() {
 
 			@Override
 			public void run() {

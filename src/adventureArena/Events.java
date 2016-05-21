@@ -236,7 +236,7 @@ public class Events implements Listener {
 	public void onPlayerRespawn(final PlayerRespawnEvent event) {
 		Player player = event.getPlayer();
 		if (HubControl.isInMiniGameHub(player)) {
-			AdventureArena.executeDelayed(0.2, new Runnable() {
+			PluginManagement.executeDelayed(0.2, new Runnable() {
 
 				@Override
 				public void run() {
@@ -463,7 +463,7 @@ public class Events implements Listener {
 			}
 			if (!PlayerControl.isPlayerInsideHisEditableArea(player)) {
 				c.setCancelled(true);
-				AdventureArena.executeDelayed(0.1, new Runnable() {
+				PluginManagement.executeDelayed(0.1, new Runnable() {
 
 					@Override
 					public void run() {

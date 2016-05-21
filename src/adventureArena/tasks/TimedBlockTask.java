@@ -9,7 +9,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.util.Vector;
 import adventureArena.AA_SignCommand;
 import adventureArena.TerrainHelper;
-import adventureArena.AdventureArena;
+import adventureArena.PluginManagement;
 import adventureArena.miniGameComponents.MiniGame;
 
 
@@ -64,7 +64,7 @@ public class TimedBlockTask implements Runnable {
 				}
 			};
 
-			runningTasks.add(AdventureArena.executeDelayed(Math.round(lifeTime) + 1, lifeTimerTask));
+			runningTasks.add(PluginManagement.executeDelayed(Math.round(lifeTime) + 1, lifeTimerTask));
 		}
 	}
 

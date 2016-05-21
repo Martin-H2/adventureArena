@@ -14,9 +14,9 @@ import adventureArena.miniGameComponents.MiniGameTrigger;
 import adventureArena.miniGameComponents.SpawnEquip;
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 
-public class AdventureArena extends JavaPlugin {
+public class PluginManagement extends JavaPlugin {
 
-	private static AdventureArena	instance;
+	private static PluginManagement	instance;
 	public static WorldEditPlugin	wep;
 
 	//	public static BountifulAPI		bfp;
@@ -55,7 +55,7 @@ public class AdventureArena extends JavaPlugin {
 		}
 	}
 
-	public static AdventureArena getInstance() {
+	public static PluginManagement getInstance() {
 		return instance;
 	}
 

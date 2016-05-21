@@ -3,7 +3,7 @@ package adventureArena.commands;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import adventureArena.AdventureArena;
+import adventureArena.PluginManagement;
 import adventureArena.control.HubControl;
 
 
@@ -18,7 +18,7 @@ public class JoinMghCommand extends AbstractCommand {
 	@Override
 	boolean onCommand(CommandSender sender, String[] args) {
 		if (args.length != 1 && args.length != 4) return false;
-		Player player = AdventureArena.getOnlinePlayerStartingWith(args[0]);
+		Player player = PluginManagement.getOnlinePlayerStartingWith(args[0]);
 		if (player == null) return false;
 		Location target = null;
 		if (args.length == 4) {

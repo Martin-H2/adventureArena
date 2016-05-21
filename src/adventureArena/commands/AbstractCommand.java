@@ -3,7 +3,7 @@ package adventureArena.commands;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import adventureArena.AdventureArena;
+import adventureArena.PluginManagement;
 import adventureArena.MessageSystem;
 
 
@@ -18,7 +18,7 @@ public abstract class AbstractCommand implements CommandExecutor {
 	public AbstractCommand(String commandString, boolean isOpOnly) {
 		this.commandString = commandString;
 		this.isOpOnly = isOpOnly;
-		AdventureArena.getInstance().getCommand(commandString).setExecutor(this);
+		PluginManagement.getInstance().getCommand(commandString).setExecutor(this);
 	}
 
 	@Override

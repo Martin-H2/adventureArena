@@ -91,7 +91,7 @@ public class MiniGameSessions {
 			AA_ScoreManager.onPlayerLeft(mg, player);
 			if (mg.isVictory()) {
 				mg.setOver();
-				AdventureArena.executeDelayed(5, new Runnable() {
+				PluginManagement.executeDelayed(5, new Runnable() {
 
 					@Override
 					public void run() {
@@ -119,7 +119,7 @@ public class MiniGameSessions {
 				p.spigot().respawn(); // will get teleported etc after respawn
 			}
 		}
-		AdventureArena.executeDelayed(0.2, new Runnable() {
+		PluginManagement.executeDelayed(0.2, new Runnable() {
 
 			@Override
 			public void run() {

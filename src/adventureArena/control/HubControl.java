@@ -125,7 +125,7 @@ public class HubControl {
 			}
 		}
 		MessageSystem.consoleDebug("done. found " + foundSignCommands.size() + " cmds in " + numBlocks + " blocks.");
-		AdventureArena.executeDelayed(5, new Runnable() {
+		PluginManagement.executeDelayed(5, new Runnable() {
 
 			@Override
 			public void run() {
@@ -136,7 +136,7 @@ public class HubControl {
 					}
 				}
 				MessageSystem.consoleDebug("done...");
-				AdventureArena.executeDelayed(5, new Runnable() {
+				PluginManagement.executeDelayed(5, new Runnable() {
 
 					@Override
 					public void run() {

@@ -371,7 +371,7 @@ public class MiniGame {
 			needsPersisting = true;
 		}
 		final MiniGame mg = this;
-		AdventureArena.executeDelayed(0.1, new Runnable() {
+		PluginManagement.executeDelayed(0.1, new Runnable() {
 
 			@Override
 			public void run() {

@@ -1,7 +1,7 @@
 package adventureArena.tasks;
 
 import org.bukkit.scheduler.BukkitRunnable;
-import adventureArena.AdventureArena;
+import adventureArena.PluginManagement;
 
 public abstract class AbstractPeriodicTask extends BukkitRunnable {
 
@@ -13,7 +13,7 @@ public abstract class AbstractPeriodicTask extends BukkitRunnable {
 		else {
 			numberOfExecutionsLeft = numberOfExecutions;
 		}
-		runTaskTimer(AdventureArena.getInstance(), (long) (initialDelaySec*20), (long) (intervalDelaySec*20));
+		runTaskTimer(PluginManagement.getInstance(), (long) (initialDelaySec*20), (long) (intervalDelaySec*20));
 	}
 
 	@Override

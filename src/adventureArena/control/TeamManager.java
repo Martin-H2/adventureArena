@@ -8,7 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
-import adventureArena.AdventureArena;
+import adventureArena.PluginManagement;
 import adventureArena.MessageSystem;
 import adventureArena.miniGameComponents.MiniGame;
 
@@ -85,7 +85,7 @@ public class TeamManager {
 			boolean newChallengeForThisMiniGame = registerTeamChallenge(miniGame, teamName, playersAroundSign);
 			if (newChallengeForThisMiniGame) {
 				MessageSystem.warningToGroup("Team " + teamName + " wants to start '" + miniGame.getName() + "'", HubControl.getAllGameHubSpectators());
-				AdventureArena.executeDelayed(10, new Runnable() {
+				PluginManagement.executeDelayed(10, new Runnable() {
 
 					@Override
 					public void run() {

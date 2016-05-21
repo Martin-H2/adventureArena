@@ -133,7 +133,7 @@ public class TerrainHelper {
 
 
 	private static File getMiniGameSchematicFile(final int id) {
-		File miniGameSchemFolder = new File(AdventureArena.getInstance().getDataFolder(), "miniGameSchematics");
+		File miniGameSchemFolder = new File(PluginManagement.getInstance().getDataFolder(), "miniGameSchematics");
 		if (!miniGameSchemFolder.exists()) {
 			miniGameSchemFolder.mkdirs();
 		}

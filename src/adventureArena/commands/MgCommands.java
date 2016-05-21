@@ -65,7 +65,7 @@ public class MgCommands extends AbstractCommand {
 				MessageSystem.error(NEED_OP_MESSAGE, sender);
 			}
 			else {
-				Player player = AdventureArena.getOnlinePlayerStartingWith(args[2]);
+				Player player = PluginManagement.getOnlinePlayerStartingWith(args[2]);
 				if (player == null) return false;
 				try {
 					int id = Integer.parseInt(args[1]);
