@@ -13,14 +13,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.util.Vector;
-import adventureArena.control.TeamManager;
 import adventureArena.control.MiniGameLoading;
 import adventureArena.control.MiniGameSessions;
 import adventureArena.control.PlayerControl;
+import adventureArena.control.TeamManager;
 import adventureArena.enums.HighScoreMode;
 import adventureArena.miniGameComponents.MiniGame;
-import adventureArena.miniGameComponents.SpawnEquip;
 import adventureArena.miniGameComponents.MiniGameTrigger;
+import adventureArena.miniGameComponents.SpawnEquip;
 
 public class AA_SignCommand {
 
@@ -444,7 +444,7 @@ public class AA_SignCommand {
 							countAndFlag = countAndFlag.trim();
 							isPerPlayerCount = true;
 						}
-						count = Integer.parseInt(countAndFlag);
+						count = Util.clamp(Integer.parseInt(countAndFlag), 1, 100);
 						parameterMap.remove("count");
 					}
 					for (String spawnedObject: parameterMap.keySet()) {

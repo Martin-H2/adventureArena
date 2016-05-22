@@ -7,7 +7,7 @@ import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
-import adventureArena.AA_ItemHelper;
+import adventureArena.ItemHelper;
 
 
 // WARNING SERIALIZED OBJECT ! Don't rename or refactor path
@@ -86,7 +86,7 @@ public class SpawnEquip implements ConfigurationSerializable {
 
 
 	public ItemStack toItemStack() {
-		return AA_ItemHelper.createAdventureItem(itemMaterial, amount, targetMaterial, ench, enchLevel);
+		return ItemHelper.createAdventureItem(itemMaterial, amount, targetMaterial, ench, enchLevel);
 	}
 
 

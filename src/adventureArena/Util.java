@@ -54,4 +54,19 @@ public class Util {
 
 
 
+	/**
+	 * @param value
+	 * @param lowerBound
+	 * @param upperBound
+	 * @return
+	 */
+	public static int clamp(int value, int lowerBound, int upperBound) {
+		if (upperBound < lowerBound) {
+			upperBound = lowerBound;
+		}
+		return Math.max(lowerBound, Math.min(upperBound, value));
+
+	}
+
+
 }

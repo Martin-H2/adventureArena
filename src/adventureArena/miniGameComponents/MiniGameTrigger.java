@@ -170,7 +170,7 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 				spawnTask.lastTick();
 			}
 			else {
-				int finalCount = count * (isPerPlayerCount ? mg.getNumberOfPlayersRemaining() : 1);
+				int finalCount = count * (isPerPlayerCount && mg.getNumberOfPlayersRemaining() >= 1 ? mg.getNumberOfPlayersRemaining() : 1);
 				spawnTask.schedule(delay + rnd.nextDouble() * delayRndRange, 1.0, finalCount);
 				runningTasks.add(spawnTask.getTaskId());
 			}

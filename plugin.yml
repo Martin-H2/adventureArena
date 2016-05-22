@@ -1,5 +1,5 @@
 name: "adventureArena"
-main: "adventureArena.AdventureArena"
+main: "adventureArena.PluginManagement"
 version: "1.0"
 depend: [WorldEdit]
 

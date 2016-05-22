@@ -8,29 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 
-public class AA_ItemHelper {
-
-	// nbt = {display:{Lore:["lore1"]}}
-
-	//
-	//	@SuppressWarnings("deprecation")
-	//	public static ItemStack createAdventureToolFor(final Material tool, final Material destroyable) {
-	//		ItemStack item = new ItemStack(tool);
-	//		NBTCompound nbt = new NBTCompound();
-	//		nbt.list("CanDestroy").add(destroyable.getId());
-	//		nbt.compound("display").list("Lore").add(ChatColor.GOLD + "Can destroy " + destroyable.toString());
-	//		NBTManager.getInstance().write(item, nbt);
-	//		return item;
-	//	}
-	//
-	//	public static ItemStack createAdventureToolFor(final Material tool, final Material destroyable, final Enchantment ench, final int level) {
-	//		ItemStack item = createAdventureToolFor(tool, destroyable);
-	//		item.addEnchantment(ench, level);
-	//		return item;
-	//	}
-	//
-	//
-
+public class ItemHelper {
 
 
 	@SuppressWarnings ("deprecation")
@@ -38,17 +16,17 @@ public class AA_ItemHelper {
 		if (amount > itemMaterial.getMaxStackSize()) {
 			amount = itemMaterial.getMaxStackSize();
 		}
-		String nbtFlag;
-		if (itemMaterial.isBlock()) {
-			nbtFlag = "CanPlaceOn";
+		String nbtTag;
+		if (isPlaceable(itemMaterial)) {
+			nbtTag = "CanPlaceOn";
 		}
 		else {
-			nbtFlag = "CanDestroy";
+			nbtTag = "CanDestroy";
 		}
 		ItemStack itemStack = new ItemStack(itemMaterial, amount);
 		if (targetMaterial != null) {
 			NBTCompound nbt = new NBTCompound();
-			nbt.list(nbtFlag).add(String.valueOf(targetMaterial.getId()));
+			nbt.list(nbtTag).add(String.valueOf(targetMaterial.getId()));
 			//nbt.compound("display").list("Lore").add(ChatColor.GOLD + nbtFlag + ": " + targetable.toString());
 			NBTManager.getInstance().write(itemStack, nbt);
 		}
@@ -65,6 +43,7 @@ public class AA_ItemHelper {
 		}
 		return itemStack;
 	}
+
 
 	public static boolean isHelmet(final ItemStack item) {
 		return item.getType() == Material.LEATHER_HELMET ||
@@ -100,26 +79,56 @@ public class AA_ItemHelper {
 			item.getType() == Material.GOLD_BOOTS;
 	}
 
+
 	public static void addItemSmart(final Player p, final ItemStack item) {
 		PlayerInventory inv = p.getInventory();
-		if (inv.getItemInOffHand() == null && item.getType() == Material.SHIELD) {
+
+		if (isEmpty(inv.getItemInOffHand()) && item.getType() == Material.SHIELD) {
 			inv.setItemInOffHand(item);
 		}
-		if (inv.getHelmet() == null && isHelmet(item)) {
+		else if (isEmpty(inv.getHelmet()) && isHelmet(item)) {
 			inv.setHelmet(item);
 		}
-		else if (inv.getChestplate() == null && isChestplate(item)) {
+		else if (isEmpty(inv.getChestplate()) && isChestplate(item)) {
 			inv.setChestplate(item);
 		}
-		else if (inv.getLeggings() == null && isLeggings(item)) {
+		else if (isEmpty(inv.getLeggings()) && isLeggings(item)) {
 			inv.setLeggings(item);
 		}
-		else if (inv.getBoots() == null && isBoots(item)) {
+		else if (isEmpty(inv.getBoots()) && isBoots(item)) {
 			inv.setBoots(item);
+		}
+		else if (isEmpty(inv.getItemInMainHand()) && isWeapon(item)) {
+			inv.setItemInMainHand(item);
 		}
 		else {
 			inv.addItem(item);
 		}
+	}
+
+
+
+	private static boolean isEmpty(ItemStack itemStack) {
+		return itemStack == null || itemStack.getType() == Material.AIR; // yep, you have AIR in empty slots ^^ wtf ...
+	}
+
+
+	private static boolean isPlaceable(Material itemMaterial) { //TODO complete list and test ?
+		return itemMaterial.isBlock()
+			|| itemMaterial == Material.WOOD_DOOR
+			|| itemMaterial == Material.SPRUCE_DOOR_ITEM
+			|| itemMaterial == Material.BIRCH_DOOR_ITEM
+			|| itemMaterial == Material.JUNGLE_DOOR_ITEM
+			|| itemMaterial == Material.ACACIA_DOOR_ITEM
+			|| itemMaterial == Material.DARK_OAK_DOOR_ITEM
+			|| itemMaterial == Material.IRON_DOOR
+			|| itemMaterial == Material.REDSTONE
+			|| itemMaterial == Material.DIODE
+			|| itemMaterial == Material.NETHER_STALK
+			|| itemMaterial == Material.ITEM_FRAME
+			|| itemMaterial == Material.ARMOR_STAND
+			|| itemMaterial == Material.BANNER
+			|| itemMaterial == Material.SIGN;
 	}
 
 
@@ -144,14 +153,13 @@ public class AA_ItemHelper {
 	//				item == Material.STONE_HOE;
 	//	}
 
-	//	private static boolean isWeapon(final Material item) {
-	//		return
-	//				item == Material.BOW ||
-	//				item == Material.WOOD_SWORD ||
-	//				item == Material.IRON_SWORD ||
-	//				item == Material.DIAMOND_SWORD ||
-	//				item == Material.STONE_SWORD;
-	//	}
+	private static boolean isWeapon(final ItemStack item) {
+		return item.getType() == Material.BOW ||
+			item.getType() == Material.WOOD_SWORD ||
+			item.getType() == Material.IRON_SWORD ||
+			item.getType() == Material.DIAMOND_SWORD ||
+			item.getType() == Material.STONE_SWORD;
+	}
 
 
 

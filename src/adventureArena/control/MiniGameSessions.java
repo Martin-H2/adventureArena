@@ -33,7 +33,7 @@ public class MiniGameSessions {
 		PlayerControl.setPlayerState(p, PlayerState.IS_PLAYING, miniGame);
 		miniGame.addPlayer(teamName, p);
 		for (ItemStack item: miniGame.getSpawnEquip()) {
-			AA_ItemHelper.addItemSmart(p, item);
+			ItemHelper.addItemSmart(p, item);
 		}
 		p.updateInventory();
 	}
