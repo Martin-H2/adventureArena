@@ -18,6 +18,7 @@ import adventureArena.control.MiniGameSessions;
 import adventureArena.control.PlayerControl;
 import adventureArena.control.TeamManager;
 import adventureArena.enums.HighScoreMode;
+import adventureArena.messages.MessageSystem;
 import adventureArena.miniGameComponents.MiniGame;
 import adventureArena.miniGameComponents.MiniGameTrigger;
 import adventureArena.miniGameComponents.SpawnEquip;

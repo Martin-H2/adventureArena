@@ -1,7 +1,7 @@
 package adventureArena.commands;
 
 import org.bukkit.command.CommandSender;
-import adventureArena.MessageSystem;
+import adventureArena.messages.MessageSystem;
 
 
 public class ServerInfoCommand extends AbstractCommand {

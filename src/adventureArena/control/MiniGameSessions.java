@@ -12,7 +12,11 @@ import org.bukkit.util.Vector;
 import adventureArena.*;
 import adventureArena.enums.ConfigPaths;
 import adventureArena.enums.PlayerState;
+import adventureArena.messages.MessageSystem;
+import adventureArena.messages.OnScreenMessages;
 import adventureArena.miniGameComponents.MiniGame;
+import adventureArena.score.HighScoreManager;
+import adventureArena.score.ScoreManager;
 
 public class MiniGameSessions {
 
@@ -24,7 +28,7 @@ public class MiniGameSessions {
 	}
 
 	static void joinPlaySession(final MiniGame miniGame, final String teamName, final Player p, final Vector spawnPoint) {
-		if (!PlayerControl.isWatchingMiniGames(p)) return;
+		if (!p.isOnline() || !PlayerControl.isWatchingMiniGames(p)) return;
 		MessageSystem.sideNote("Starting " + miniGame.getName() + " for you...", p);
 		PlayerControl.clearInventoryAndBuffs(p);
 		p.setGameMode(HubControl.MINIGAME_HUB_GAMEMODE);
@@ -44,14 +48,14 @@ public class MiniGameSessions {
 			return;
 		}
 
-		if (miniGame.isInProgress()) {
+		if (miniGame.isPlaySessionActive()) {
 			MessageSystem.error("This minigame is in progress and can't be edited. (Your changes would be nullified by the area-rollback)", player);
 			return;
 		}
 
 		if (PlayerControl.isPlayerInsideHisEditableArea(player)) {
 			// START EDITING NOW
-			if (!miniGame.isLockedByEditSession()) {
+			if (!miniGame.isEditSessionActive()) {
 				// 1st editor comes in
 				prepareSession(miniGame);
 			}
@@ -88,7 +92,7 @@ public class MiniGameSessions {
 			}
 		}
 		else if (PlayerControl.isPlayingMiniGame(player)) {
-			AA_ScoreManager.onPlayerLeft(mg, player);
+			ScoreManager.onPlayerLeft(mg, player);
 			if (mg.isVictory()) {
 				mg.setOver();
 				PluginManagement.executeDelayed(5, new Runnable() {
@@ -99,7 +103,7 @@ public class MiniGameSessions {
 					}
 				});
 			}
-			AA_ScoreManager.updateHighScoreList(mg);
+			HighScoreManager.updateHighScoreList(mg);
 		}
 		HubControl.becomeSpectator(player, onDeath, mg.getSpectatorRespawnPoint(), false);
 	}
@@ -109,8 +113,8 @@ public class MiniGameSessions {
 			if (!p.isDead()) {
 				if (PlayerControl.isPlayingMiniGame(p)) {
 					//AA_MessageSystem.success("You won " + mg.getName(), p);
-					AA_OnScreenMessages.sendGameWonMessage(miniGame, p);
-					AA_ScoreManager.onPlayerWin(miniGame, p);
+					OnScreenMessages.sendGameWonMessage(miniGame, p);
+					ScoreManager.onPlayerWin(miniGame, p);
 					miniGame.removePlayer(p);
 					HubControl.becomeSpectator(p, false, miniGame.getSpectatorRespawnPoint(), false);
 				}
@@ -123,7 +127,7 @@ public class MiniGameSessions {
 
 			@Override
 			public void run() {
-				AA_ScoreManager.updateHighScoreList(miniGame);
+				HighScoreManager.updateHighScoreList(miniGame);
 			}
 		});
 		miniGame.wipeEntities();
@@ -148,13 +152,13 @@ public class MiniGameSessions {
 
 	static boolean canJoinMiniGame(final MiniGame miniGame, final ArrayList<Player> players) {
 		// EDIT SESSION CHECK
-		if (miniGame.isLockedByEditSession()) {
+		if (miniGame.isEditSessionActive()) {
 			MessageSystem.errorToGroup("This minigame is currently locked by an edit-session.", players);
 			MessageSystem.errorToGroup("Sombody wanted to play your " + miniGame.getName() + ", but it's locked by an edit-session.", miniGame.getAllowedEditors());
 			return false;
 		}
 		// IN PROGRESS CHECK
-		if (miniGame.isInProgress()) {
+		if (miniGame.isPlaySessionActive()) {
 			MessageSystem.errorToGroup("This minigame is already in progress.", players);
 			return false;
 		}

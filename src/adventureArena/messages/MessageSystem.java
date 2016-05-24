@@ -1,4 +1,4 @@
-package adventureArena;
+package adventureArena.messages;
 
 import java.util.Collection;
 import org.bukkit.Bukkit;

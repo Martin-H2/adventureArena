@@ -10,6 +10,7 @@ import adventureArena.commands.MgCommands;
 import adventureArena.commands.ServerInfoCommand;
 import adventureArena.control.HubControl;
 import adventureArena.control.MiniGameLoading;
+import adventureArena.messages.MessageSystem;
 import adventureArena.miniGameComponents.MiniGameTrigger;
 import adventureArena.miniGameComponents.SpawnEquip;
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
@@ -71,8 +72,8 @@ public class PluginManagement extends JavaPlugin {
 	//		instance.getServer().getScheduler().scheduleSyncRepeatingTask(instance, runnable, delaySec*20, delaySec*20);
 	//	}
 
-	public static void executePeriodically(final int delaySec, final Runnable runnable) {
-		instance.getServer().getScheduler().scheduleSyncRepeatingTask(instance, runnable, delaySec * 20, delaySec * 20);
+	public static int executePeriodically(final int delaySec, final Runnable runnable) {
+		return instance.getServer().getScheduler().scheduleSyncRepeatingTask(instance, runnable, delaySec * 20, delaySec * 20);
 	}
 
 

@@ -3,10 +3,11 @@ package adventureArena.control;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import adventureArena.AA_ScoreManager;
+import adventureArena.ConfigAccess;
 import adventureArena.TerrainHelper;
-import adventureArena.MessageSystem;
+import adventureArena.messages.MessageSystem;
 import adventureArena.miniGameComponents.MiniGame;
+import adventureArena.score.HighScoreManager;
 
 
 public class MiniGameManagement {
@@ -54,7 +55,7 @@ public class MiniGameManagement {
 			for (Player p: mg.getPlayersRemaining()) {
 				MiniGameSessions.kickIfInsideMiniGame(p);
 			}
-			if (mg.isInProgress() || mg.isLockedByEditSession()) {
+			if (mg.isAnySessionActive()) {
 				mg.wipeEntities();
 				mg.wipeSessionVariables();
 			}
@@ -78,7 +79,7 @@ public class MiniGameManagement {
 		if (mg != null) {
 			surroundingMiniGameSessionWipe(player);
 			mg.resetRoom();
-			AA_ScoreManager.surroundingMiniGameScoreReset(player);
+			MiniGameManagement.surroundingMiniGameScoreReset(player);
 		}
 		else {
 			MessageSystem.error("no minigame found in this area", player);
@@ -88,7 +89,7 @@ public class MiniGameManagement {
 	public static void surroundingMiniGameFixSigns(Player player) {
 		MiniGame mg = MiniGameLoading.getMiniGameContainingLocation(player.getLocation());
 		if (mg != null) {
-			if (mg.isLockedByEditSession()) {
+			if (mg.isEditSessionActive()) {
 				TerrainHelper.fixSigns(mg);
 			}
 			else {
@@ -97,6 +98,19 @@ public class MiniGameManagement {
 		}
 		else {
 			MessageSystem.error("no minigame found in this area", player);
+		}
+	}
+
+	public static void surroundingMiniGameScoreReset(final Player player) {
+		MiniGame mg = MiniGameLoading.getMiniGameContainingLocation(player.getLocation());
+		if (mg != null) {
+			MessageSystem.sideNote("Resetting highScore for " + mg.getName(), player);
+			ConfigAccess.getHighscoreConfig().set(String.valueOf(mg.getID()), null);
+			ConfigAccess.saveHighscoreConfig();
+			HighScoreManager.updateHighScoreList(mg);
+		}
+		else {
+			MessageSystem.error("You are not inside a miniGame area", player);
 		}
 	}
 

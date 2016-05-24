@@ -13,54 +13,48 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.*;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
-import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.world.PortalCreateEvent;
 import org.bukkit.projectiles.ProjectileSource;
-import org.bukkit.util.BlockVector;
 import adventureArena.control.*;
+import adventureArena.messages.MessageSystem;
+import adventureArena.messages.OnScreenMessages;
 import adventureArena.miniGameComponents.MiniGame;
-import adventureArena.miniGameComponents.MiniGameTrigger;
+import adventureArena.score.ScoreManager;
 
 @SuppressWarnings ("deprecation")
 public class Events implements Listener {
 
-	static Map<UUID, BlockVector>	currentPlayerBlockPos	= new HashMap<UUID, BlockVector>();
+	static Map<UUID, Integer>		playerBlockPos	= new HashMap<UUID, Integer>();
 
-	private static HashSet<Byte>	transparent				= new HashSet<Byte>();
+	private static HashSet<Byte>	transparent		= new HashSet<Byte>();
 	static {
 		transparent.add((byte) Material.AIR.getId());
 		transparent.add((byte) Material.LONG_GRASS.getId());
 		transparent.add((byte) Material.WALL_SIGN.getId());
 	}
 
+
+
 	@EventHandler
 	public void onPlayerMove(final PlayerMoveEvent e) {
-		BlockVector newPosRounded = e.getTo().toVector().toBlockVector();
-		if (newPosRounded.equals(currentPlayerBlockPos.get(e.getPlayer().getUniqueId()))) return;
-		else {
-			currentPlayerBlockPos.put(e.getPlayer().getUniqueId(), newPosRounded);
-			onBlockEnter(e.getPlayer(), newPosRounded, e.getTo().getBlock());
+		Integer simpleFlooredLocationHash = TerrainHelper.simpleFlooredLocationHash(e.getTo());
+		if (!simpleFlooredLocationHash.equals(playerBlockPos.get(e.getPlayer().getUniqueId()))) {
+			playerBlockPos.put(e.getPlayer().getUniqueId(), simpleFlooredLocationHash);
+			onBlockEnter(e.getPlayer(), e.getTo().getBlock());
 		}
-		//		Location target = e.getTo();
-		//
-		//		int simpleHash = target.getBlockX()+target.getBlockY()*100+target.getBlockX()*10000;
 	}
 
-	private void onBlockEnter(final Player player, final BlockVector newPosRounded, final Block block) {
-		//player.sendMessage("BLOCK-ENTER: " + newPosRounded.toString());
+	private void onBlockEnter(final Player player, final Block block) {
 		if (PlayerControl.isPlayingMiniGame(player)) {
 			MiniGame mg = MiniGameLoading.getMiniGameForPlayer(player);
-			if (mg != null) {
-				for (MiniGameTrigger mt: mg.getRangedTriggers()) {
-					//AA_MessageSystem.consoleDebug("TRIGGER: " + mt);
-					mt.checkRangeAndTrigger(player, mg);
-				}
-			}
+			mg.checkRangedTriggersOn(player);
 		}
 		else if (PlayerControl.isEditingMiniGame(player)) {
 			MiniGame mg = MiniGameLoading.getMiniGameForPlayer(player);
@@ -89,21 +83,6 @@ public class Events implements Listener {
 	}
 
 
-
-	// ############## MINIGAME GAMEPLAY ################
-
-	//	@EventHandler
-	//	public void onBlockRedstone(final BlockRedstoneEvent e) {
-	//		AA_MessageSystem.consoleWarn("BlockRedstoneEvent[" + e.getBlock().getType() + "]: " + e.getOldCurrent() + "->" + e.getNewCurrent());
-	//	}
-
-	//	@EventHandler
-	//	public void onEntityRegainHealth(final EntityRegainHealthEvent e) {
-	//		if (e.getEntity() instanceof Player && AA_MiniGameControl.isPlayingMiniGame((Player) e.getEntity())) {
-	//			e.setCancelled(true);
-	//		}
-	//	}
-
 	@EventHandler
 	public void onEntityDamageByEntity(final EntityDamageByEntityEvent event) {
 		if (event.getEntity() instanceof Player) {
@@ -116,7 +95,7 @@ public class Events implements Listener {
 						event.setCancelled(true);
 					}
 					else if (miniGame.isPvp()) {
-						AA_OnScreenMessages.sendPvpHitMessage(victim, attacker, event);
+						OnScreenMessages.sendPvpHitMessage(victim, attacker, event);
 					}
 					else {
 						// e.g. Spleef
@@ -145,7 +124,7 @@ public class Events implements Listener {
 					e.setCancelled(true);
 				}
 				else {
-					//AA_OnScreenHitMessages.pvpHitMessage(victim, null, e); //TODO ?
+					//AA_OnScreenHitMessages.pvpHitMessage(victim, null, e); 	//can't really detect indirect PVP damage
 				}
 			}
 		}
@@ -185,21 +164,14 @@ public class Events implements Listener {
 	//
 	//	}
 
-	//	@EventHandler
-	//	public void onItemSpawn(final ItemSpawnEvent e) {
-	//		if(AA_MiniGameControl.getMiniGameContainingLocation(e.getLocation())!=null){
-	//			//test
-	//			//e.setCancelled(true);
-	//		}
-	//	}
+
 
 	@EventHandler
 	public void onCreatureSpawn(final CreatureSpawnEvent e) {
 		if (HubControl.isInMgHubAABB(e.getLocation())) {
-			//AA_MessageSystem.consoleDebug("CreatureSpawnEvent: " + e.getSpawnReason() + ", " + e.getEntityType());
 			if (e.getSpawnReason() == SpawnReason.NATURAL) {
 				MiniGame mg = MiniGameLoading.getMiniGameContainingLocation(e.getLocation());
-				if (mg != null && (mg.isInProgress() || mg.isLockedByEditSession())) {
+				if (mg != null && mg.isAnySessionActive()) { //only cancel mob-spawning for active sessions to prevent memory leaks
 					e.setCancelled(true);
 				}
 			}
@@ -208,16 +180,15 @@ public class Events implements Listener {
 
 	@EventHandler
 	public void onPlayerDeath(final PlayerDeathEvent event) {
-		Player player = event.getEntity();
-		//player.sendMessage("[onPlayerDeath] player.isDead() = " + player.isDead());
-		if (PlayerControl.isPlayingMiniGame(player)) {
+		Player dyingPlayer = event.getEntity();
+		if (PlayerControl.isPlayingMiniGame(dyingPlayer)) {
 			event.setKeepLevel(true);
-			AA_ScoreManager.onPlayerDeath(event.getEntity());
-			MiniGameSessions.leaveCurrentSession(player, true);
+			ScoreManager.onPlayerDeath(dyingPlayer);
+			MiniGameSessions.leaveCurrentSession(dyingPlayer, true);
 		}
-		else if (PlayerControl.isEditingMiniGame(player)) {
+		else if (PlayerControl.isEditingMiniGame(dyingPlayer)) {
 			event.setKeepLevel(true);
-			MiniGameSessions.leaveCurrentSession(player, true);
+			MiniGameSessions.leaveCurrentSession(dyingPlayer, true);
 		}
 		else {
 			event.setKeepLevel(false);
@@ -228,7 +199,7 @@ public class Events implements Listener {
 	public void onEntityDeath(final EntityDeathEvent event) {
 		Player killer = event.getEntity().getKiller();
 		if (killer != null && PlayerControl.isPlayingMiniGame(killer)) {
-			AA_ScoreManager.onEntityDeath(event.getEntity(), killer);
+			ScoreManager.onEntityDeath(event.getEntity(), killer);
 		}
 	}
 
@@ -240,9 +211,6 @@ public class Events implements Listener {
 
 				@Override
 				public void run() {
-					if (PlayerControl.isPlayingMiniGame(player)) {
-						MiniGameLoading.getMiniGameForPlayer(player).removePlayer(player);;
-					}
 					HubControl.becomeSpectator(event.getPlayer(), false, event.getPlayer().getBedSpawnLocation(), false);
 				}
 			});
@@ -251,8 +219,6 @@ public class Events implements Listener {
 
 
 
-	// ############## NO CHEATING WITH CREATIVE ################
-
 	@EventHandler (priority = EventPriority.HIGHEST)
 	public void onPlayerBedEnter(final PlayerBedEnterEvent e) {
 		if (HubControl.isInMiniGameHub(e.getPlayer())) {
@@ -260,14 +226,14 @@ public class Events implements Listener {
 		}
 	}
 
-	@EventHandler
+	@EventHandler (priority = EventPriority.HIGHEST)
 	public void onPlayerExpChange(final PlayerExpChangeEvent e) {
-		if (e.getPlayer().getGameMode() == GameMode.CREATIVE) {
+		if (PlayerControl.isEditingMiniGame(e.getPlayer())) {
 			e.setAmount(0);
 		}
 	}
 
-	@EventHandler
+	@EventHandler (priority = EventPriority.HIGHEST)
 	public void onPlayerTeleport(final PlayerTeleportEvent e) {
 		if ((PlayerControl.isPlayingMiniGame(e.getPlayer()) || PlayerControl.isEditingMiniGame(e.getPlayer()))
 			&& !MiniGameLoading.getMiniGameForPlayer(e.getPlayer()).isInsidePlayableBounds(e.getTo())) {
@@ -275,27 +241,27 @@ public class Events implements Listener {
 		}
 	}
 
-	@EventHandler
-	public void onBlockPistonExtend(BlockPistonExtendEvent e) {
-		for (Block b: e.getBlocks()) {
-			if (TerrainHelper.isUndestroyableArenaBorder(b)) {
-				e.setCancelled(true);
-				break;
-			}
-		}
-	}
+	//	@EventHandler
+	//	public void onBlockPistonExtend(BlockPistonExtendEvent e) {
+	//		for (Block b: e.getBlocks()) {
+	//			if (TerrainHelper.isUndestroyableArenaBorder(b)) {
+	//				e.setCancelled(true);
+	//				break;
+	//			}
+	//		}
+	//	}
+	//
+	//	@EventHandler
+	//	public void onBlockPistonRetract(BlockPistonRetractEvent e) {
+	//		for (Block b: e.getBlocks()) {
+	//			if (TerrainHelper.isUndestroyableArenaBorder(b)) {
+	//				e.setCancelled(true);
+	//				break;
+	//			}
+	//		}
+	//	}
 
-	@EventHandler
-	public void onBlockPistonRetract(BlockPistonRetractEvent e) {
-		for (Block b: e.getBlocks()) {
-			if (TerrainHelper.isUndestroyableArenaBorder(b)) {
-				e.setCancelled(true);
-				break;
-			}
-		}
-	}
-
-	@EventHandler
+	@EventHandler (priority = EventPriority.HIGHEST)
 	public void onPortalCreate(final PortalCreateEvent e) {
 		MiniGame mg = MiniGameLoading.getMiniGameContainingLocation(e.getBlocks().iterator().next().getLocation());
 		if (mg != null) {
@@ -306,46 +272,31 @@ public class Events implements Listener {
 		}
 	}
 
-	@EventHandler
-	public void onBlockPlace(final BlockPlaceEvent event) {
-		onBlockModify(event.getBlock(), event.getPlayer(), event);
-	}
-
+	//	@EventHandler
+	//	public void onBlockPlace(final BlockPlaceEvent event) {
+	//		onBlockModify(event.getBlock(), event.getPlayer(), event);
+	//	}
+	//
 	public void onBlockModify(final Block block, final Player player, final Cancellable c) {
-		antiCheatControl(player, block, c);
+		antiCheatControl(player, block, c); //TODO rellay needed ?
 	}
 
-	@EventHandler
-	public void onInventoryOpen(final InventoryOpenEvent event) {//use block enter event ?
-		if (event.getPlayer() instanceof Player) {
-			antiCheatControl((Player) event.getPlayer(), null, event);
-		}
-	}
-
-	@EventHandler
-	public void onPlayerDropItem(final PlayerDropItemEvent event) {
-		antiCheatControl(event.getPlayer(), null, event);
-	}
+	//
+	//	@EventHandler
+	//	public void onInventoryOpen(final InventoryOpenEvent event) {//use block enter event ?
+	//		if (event.getPlayer() instanceof Player) {
+	//			antiCheatControl((Player) event.getPlayer(), null, event);
+	//		}
+	//	}
+	//
+	//	@EventHandler
+	//	public void onPlayerDropItem(final PlayerDropItemEvent event) {
+	//		antiCheatControl(event.getPlayer(), null, event);
+	//	}
 
 
 
 	// ############## SIGN EDIT ################
-
-	@EventHandler
-	public void onEntityExplode(final EntityExplodeEvent event) {
-		List<Block> blocksToRemove = new ArrayList<Block>();
-		for (Block b: event.blockList()) {
-			AA_SignCommand signCommand = AA_SignCommand.createFrom(b);
-			if (signCommand != null && signCommand.isClickCommand()) {
-				blocksToRemove.add(b);
-				blocksToRemove.add(signCommand.getAttachedBlock());
-			}
-			else if (TerrainHelper.isUndestroyableArenaBorder(b)) {
-				blocksToRemove.add(b);
-			}
-		}
-		event.blockList().removeAll(blocksToRemove);
-	}
 
 
 	@EventHandler
@@ -367,6 +318,23 @@ public class Events implements Listener {
 	}
 
 	@EventHandler
+	public void onEntityExplode(final EntityExplodeEvent event) {
+		List<Block> blocksToRemove = new ArrayList<Block>();
+		for (Block b: event.blockList()) {
+			AA_SignCommand signCommand = AA_SignCommand.createFrom(b);
+			if (signCommand != null && signCommand.isClickCommand()) { //TODO protect in editSession
+				blocksToRemove.add(b);
+				blocksToRemove.add(signCommand.getAttachedBlock());
+			}
+			else if (TerrainHelper.isUndestroyableArenaBorder(b)) {
+				blocksToRemove.add(b);
+			}
+		}
+		event.blockList().removeAll(blocksToRemove);
+	}
+
+
+	@EventHandler
 	public void onSignChange(final SignChangeEvent event) {
 		final AA_SignCommand signCommand = AA_SignCommand.createFrom(event.getBlock(), event.getLines(), event);
 		if (signCommand != null) {
@@ -381,11 +349,10 @@ public class Events implements Listener {
 	@EventHandler
 	public void onPlayerInteract(final PlayerInteractEvent event) {
 		if (event.getPlayer().getGameMode().equals(GameMode.CREATIVE) && event.getAction().equals(Action.RIGHT_CLICK_BLOCK)) {
-			onSignClick(event.getPlayer(), event.getClickedBlock());
-			if (event.getClickedBlock().getType() == Material.ENDER_CHEST) {
-				event.setCancelled(true);
-				//Bukkit.createInventory(p, 27, ChatColor.GRAY + "EnderChest" + "(" + p.getName() + ")");
-			}
+			onClick(event.getPlayer(), event.getClickedBlock());
+		}
+		if (HubControl.isInMgHubAABB(event.getPlayer().getLocation()) && event.getClickedBlock().getType() == Material.ENDER_CHEST) {
+			event.setCancelled(true);
 		}
 	}
 
@@ -395,21 +362,21 @@ public class Events implements Listener {
 			List<Block> targetBlocks = event.getPlayer().getLineOfSight(transparent, 3);
 			for (int i = 0; i < targetBlocks.size(); i++) {
 				if (targetBlocks.get(i).getType().equals(Material.SIGN_POST)) {
-					Events.onSignClick(event.getPlayer(), targetBlocks.get(i));
+					Events.onClick(event.getPlayer(), targetBlocks.get(i));
 					break;
 				}
 				else if (targetBlocks.get(i).getType().equals(Material.WALL_SIGN)
 					&& i + 1 == targetBlocks.size()
 					|| i + 1 < targetBlocks.size()
 					&& !targetBlocks.get(i + 1).getType().equals(Material.WALL_SIGN)) {
-					Events.onSignClick(event.getPlayer(), targetBlocks.get(i));
+					Events.onClick(event.getPlayer(), targetBlocks.get(i));
 					break;
 				}
 			}
 		}
 	}
 
-	public static void onSignClick(final Player player, final Block block) {
+	public static void onClick(final Player player, final Block block) {
 		AA_SignCommand signCommand = AA_SignCommand.createFrom(block);
 		if (signCommand != null) {
 			signCommand.executeOnClick(player, null);
@@ -455,7 +422,7 @@ public class Events implements Listener {
 		return null;
 	}
 
-	private void antiCheatControl(final Player player, final Block block, final Cancellable c) {
+	private void antiCheatControl(final Player player, final Block block, final Cancellable c) { //TODO rework this
 		if (player != null && player.getGameMode() == GameMode.CREATIVE && !player.isOp()) {
 			if (block != null && TerrainHelper.isUndestroyableArenaBorder(block)) {
 				c.setCancelled(true);

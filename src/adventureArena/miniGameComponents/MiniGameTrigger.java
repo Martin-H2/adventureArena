@@ -7,8 +7,8 @@ import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
-import adventureArena.AA_ScoreManager;
 import adventureArena.PluginManagement;
+import adventureArena.score.ScoreManager;
 import adventureArena.tasks.AbstractPeriodicTask;
 import adventureArena.tasks.PeriodicEntityTask;
 import adventureArena.tasks.TimedBlockTask;
@@ -146,7 +146,7 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 	//#### PRIVATE API ####
 	private void triggerScore(final Player p) {
 		if (p != null) {
-			AA_ScoreManager.onSetScoreCmd(p, newScore);
+			ScoreManager.onSetScoreCmd(p, newScore);
 		}
 	}
 

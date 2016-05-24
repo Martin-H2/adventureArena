@@ -4,7 +4,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import adventureArena.PluginManagement;
-import adventureArena.MessageSystem;
+import adventureArena.messages.MessageSystem;
 
 
 public abstract class AbstractCommand implements CommandExecutor {

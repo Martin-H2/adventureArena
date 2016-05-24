@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import adventureArena.messages.MessageSystem;
 
 
 public class ConfigAccess {
@@ -15,6 +16,8 @@ public class ConfigAccess {
 	private static final String			HIGHSCORES_CONFIGNAME			= "highScores.yml";
 	private static File					highScoreConfigFile				= null;
 	private static YamlConfiguration	highScoreConfig					= null;
+	private static boolean				highScoreConfigNeedsSaving		= false;
+	private static int					highScoreSavingTaskId			= -1;
 
 	private static final String			SAVED_INVENTORIES_CONFIG_NAME	= "savedPlayerInventories.yml";
 	private static File					savedInventoriesConfigFile		= null;
@@ -64,13 +67,34 @@ public class ConfigAccess {
 
 	public static void saveHighscoreConfig() {
 		if (highScoreConfig != null) {
-			try {
-				highScoreConfig.save(highScoreConfigFile);
+			highScoreConfigNeedsSaving = true;
+			if (highScoreSavingTaskId == -1) {
+				highScoreSavingTaskId = PluginManagement.executePeriodically(5, new Runnable() {
+
+					// preventing HDD access spam on mob kills due to score updates
+					@Override
+					public void run() {
+						if (highScoreConfigNeedsSaving) {
+							try {
+								highScoreConfig.save(highScoreConfigFile);
+								//MessageSystem.consoleDebug("saving " + highScoreConfigFile.getName());
+							}
+							catch (IOException e) {
+								MessageSystem.consoleError(HIGHSCORES_CONFIGNAME + "cannot be overwritten or created");
+								e.printStackTrace();
+							}
+							highScoreConfigNeedsSaving = false;
+						}
+						else {
+							int temp = highScoreSavingTaskId;
+							highScoreSavingTaskId = -1;
+							PluginManagement.cancelTask(temp);
+						}
+					}
+				});
 			}
-			catch (IOException e) {
-				MessageSystem.consoleError(HIGHSCORES_CONFIGNAME + "cannot be overwritten or created");
-				e.printStackTrace();
-			}
+
+
 		}
 	}
 

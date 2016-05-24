@@ -1,15 +1,16 @@
-package adventureArena;
+package adventureArena.messages;
 
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
 import adventureArena.control.PlayerControl;
 import adventureArena.miniGameComponents.MiniGame;
+import adventureArena.score.HighScoreManager;
 import com.connorlinfoot.actionbarapi.ActionBarAPI;
 import com.connorlinfoot.titleapi.TitleAPI;
 
 
-public class AA_OnScreenMessages {
+public class OnScreenMessages {
 
 	public static void sendPvpHitMessage(Player victim, Player attacker, EntityDamageEvent event) {
 		long dmg = Math.round(event.getFinalDamage());
@@ -57,7 +58,7 @@ public class AA_OnScreenMessages {
 	public static void sendGameWonMessage(MiniGame mg, Player p) {
 		sendTitleAndSubtitle(p, 0.5, 4.5, 1.0,
 				ChatColor.GREEN + "You won '" + mg.getName() + "'",
-				ChatColor.DARK_GREEN + String.format("Your new rating is %.0f", AA_ScoreManager.getHighScoreRating(mg, p)));
+				ChatColor.DARK_GREEN + String.format("Your new rating is %.0f", HighScoreManager.getHighScoreRating(mg, p)));
 	}
 
 

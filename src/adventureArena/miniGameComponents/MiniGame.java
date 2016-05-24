@@ -10,13 +10,17 @@ import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
-import adventureArena.*;
+import adventureArena.ConfigAccess;
+import adventureArena.PluginManagement;
+import adventureArena.TerrainHelper;
 import adventureArena.control.MiniGameLoading;
 import adventureArena.control.PlayerControl;
 import adventureArena.control.TeamManager;
 import adventureArena.enums.ConfigPaths;
 import adventureArena.enums.HighScoreMode;
 import adventureArena.enums.ScoreType;
+import adventureArena.messages.MessageSystem;
+import adventureArena.score.HighScoreManager;
 
 public class MiniGame {
 
@@ -39,8 +43,8 @@ public class MiniGame {
 	private boolean							needsPersisting			= true;
 	private boolean							needsEnvironmentBackup	= true;
 
-	private boolean							lockedByEditSession		= false;
-	private boolean							inProgress				= false;
+	private boolean							isEditSessionActive		= false;
+	private boolean							isPlaySessionActive				= false;
 	private World							world					= null;
 
 	//play session.
@@ -66,8 +70,8 @@ public class MiniGame {
 
 	public void persist() {
 		set(ConfigPaths.needsEnvironmentBackup, needsEnvironmentBackup);
-		set(ConfigPaths.lockedByEditSession, lockedByEditSession);
-		set(ConfigPaths.inProgress, inProgress);
+		set(ConfigPaths.lockedByEditSession, isEditSessionActive);
+		set(ConfigPaths.inProgress, isPlaySessionActive);
 		set(ConfigPaths.worldName, world.getName());
 		set(ConfigPaths.southEastMax, getSouthEastMax());
 		set(ConfigPaths.northWestMin, getNorthWestMin());
@@ -99,8 +103,8 @@ public class MiniGame {
 		if (!cfg.contains(miniGameRootPath)) return null;
 		MiniGame mg = new MiniGame(id, Bukkit.getWorld(cfg.getString(miniGameRootPath + "." + ConfigPaths.worldName, "3gd")));
 		mg.needsEnvironmentBackup = cfg.getBoolean(miniGameRootPath + "." + ConfigPaths.needsEnvironmentBackup, true);
-		mg.lockedByEditSession = cfg.getBoolean(miniGameRootPath + "." + ConfigPaths.lockedByEditSession, false);
-		mg.inProgress = cfg.getBoolean(miniGameRootPath + "." + ConfigPaths.inProgress, false);
+		mg.isEditSessionActive = cfg.getBoolean(miniGameRootPath + "." + ConfigPaths.lockedByEditSession, false);
+		mg.isPlaySessionActive = cfg.getBoolean(miniGameRootPath + "." + ConfigPaths.inProgress, false);
 		mg.setSouthEastMax(cfg.getVector(miniGameRootPath + "." + ConfigPaths.southEastMax, null));
 		mg.setNorthWestMin(cfg.getVector(miniGameRootPath + "." + ConfigPaths.northWestMin, null));
 		mg.name = cfg.getString(miniGameRootPath + "." + ConfigPaths.name, "newMiniGame");
@@ -375,7 +379,7 @@ public class MiniGame {
 
 			@Override
 			public void run() {
-				AA_ScoreManager.updateHighScoreList(mg);
+				HighScoreManager.updateHighScoreList(mg);
 			}
 		});
 	}
@@ -408,18 +412,22 @@ public class MiniGame {
 		return needsEnvironmentBackup;
 	}
 
-	public boolean isLockedByEditSession() {
-		return lockedByEditSession;
+	public boolean isEditSessionActive() {
+		return isEditSessionActive;
 	}
 
-	public boolean isInProgress() {
-		return inProgress;
+	public boolean isPlaySessionActive() {
+		return isPlaySessionActive;
+	}
+
+	public boolean isAnySessionActive() {
+		return isPlaySessionActive || isEditSessionActive;
 	}
 
 
 
 	public void setLockedByEditSession(final boolean locked) {
-		lockedByEditSession = locked;
+		isEditSessionActive = locked;
 		if (locked) {
 			needsEnvironmentBackup = true;
 		}
@@ -427,7 +435,7 @@ public class MiniGame {
 	}
 
 	public void setInProgress(final boolean inProgress) {
-		this.inProgress = inProgress;
+		this.isPlaySessionActive = inProgress;
 		persist();
 	}
 
@@ -513,8 +521,8 @@ public class MiniGame {
 			+ ", #startTriggers: " + startTriggers.size()
 			+ ", #distanceTriggers: " + rangedTriggers.size()
 			+ ", needsEnvironmentBackup: " + needsEnvironmentBackup
-			+ ", inProgress: " + inProgress
-			+ ", lockedByEditSession: " + lockedByEditSession
+			+ ", inProgress: " + isPlaySessionActive
+			+ ", lockedByEditSession: " + isEditSessionActive
 			+ ", isSoloPlayable: " + isSoloPlayable()
 			+ ", numberOfPlayersRemaining: " + getNumberOfPlayersRemaining()
 			+ ", initialJoiners: " + initialJoiners.toString()
@@ -713,8 +721,8 @@ public class MiniGame {
 		startTriggers.clear();
 		needsPersisting = true;
 		needsEnvironmentBackup = true;
-		lockedByEditSession = false;
-		inProgress = false;
+		isEditSessionActive = false;
+		isPlaySessionActive = false;
 		persist();
 		TerrainHelper.resetMiniGameRoom(this);
 		doEnvironmentBackup();
@@ -725,6 +733,12 @@ public class MiniGame {
 			playableAreaMidpoint = getSouthEastMax().getMidpoint(getNorthWestMin());
 		}
 		return playableAreaMidpoint;
+	}
+
+	public void checkRangedTriggersOn(Player player) {
+		for (MiniGameTrigger mt: getRangedTriggers()) {
+			mt.checkRangeAndTrigger(player, this);
+		}
 	}
 
 

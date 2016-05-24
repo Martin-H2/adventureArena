@@ -52,8 +52,7 @@ public class TerrainHelper {
 
 	public static boolean isUndestroyableArenaBorder(final Block block) {
 		return block.getType() == Material.BEDROCK ||
-			block.getType() == Material.BARRIER ||
-			block.getType() == Material.STAINED_GLASS;
+			block.getType() == Material.BARRIER;
 	}
 
 
@@ -82,7 +81,7 @@ public class TerrainHelper {
 		if (signBlock != null && signBlock.getState() instanceof Sign) {
 			Sign signState = (Sign) signBlock.getState();
 			org.bukkit.material.Sign signData = (org.bukkit.material.Sign) signState.getData();
-			return signData.getAttachedFace().getOppositeFace() == searchDirection;
+			return signData.getAttachedFace().getOppositeFace() == searchDirection; //there could be a sign block, but attached to another block !
 		}
 		else return false;
 	}
@@ -94,7 +93,7 @@ public class TerrainHelper {
 	public static boolean saveMiniGameToSchematic(final Vector northWestMin, final Vector southEastMax, final int id, final World world) {
 		//TODO ? save & load async
 		File file = getMiniGameSchematicFile(id);
-		int specRoomHeight = 2; //TODO ? dynamic spec room height
+		int specRoomHeight = 3; //TODO ? dynamic spec room height
 		com.sk89q.worldedit.Vector min = new com.sk89q.worldedit.Vector(northWestMin.getX(), northWestMin.getY(), northWestMin.getZ());
 		com.sk89q.worldedit.Vector max = new com.sk89q.worldedit.Vector(southEastMax.getX(), southEastMax.getY() - specRoomHeight, southEastMax.getZ());
 		EditSession es = WorldEdit.getInstance().getEditSessionFactory().getEditSession(new BukkitWorld(world), -1);
@@ -191,6 +190,11 @@ public class TerrainHelper {
 				}
 			}
 		}
+	}
+
+
+	public static Integer simpleFlooredLocationHash(Location loc) {
+		return Integer.valueOf(loc.getBlockX() * 10000 + loc.getBlockY() * 100 + loc.getBlockZ());
 	}
 
 

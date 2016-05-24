@@ -6,6 +6,7 @@ import adventureArena.*;
 import adventureArena.control.HubControl;
 import adventureArena.control.MiniGameManagement;
 import adventureArena.control.PlayerControl;
+import adventureArena.messages.MessageSystem;
 
 
 public class MgCommands extends AbstractCommand {
@@ -34,7 +35,7 @@ public class MgCommands extends AbstractCommand {
 			if (PlayerControl.isPlayerInsideHisEditableArea(commandSender)) {
 				switch (subCommand) {
 				case "resetScore":
-					AA_ScoreManager.surroundingMiniGameScoreReset(commandSender);
+					MiniGameManagement.surroundingMiniGameScoreReset(commandSender);
 					return true;
 				case "wipeSession":
 					MiniGameManagement.surroundingMiniGameSessionWipe(commandSender);

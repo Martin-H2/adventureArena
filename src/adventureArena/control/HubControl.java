@@ -15,6 +15,7 @@ import org.bukkit.util.Vector;
 import adventureArena.*;
 import adventureArena.enums.ConfigPaths;
 import adventureArena.enums.PlayerState;
+import adventureArena.messages.MessageSystem;
 
 
 public class HubControl {

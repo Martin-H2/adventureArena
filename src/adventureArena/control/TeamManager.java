@@ -9,7 +9,7 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 import adventureArena.PluginManagement;
-import adventureArena.MessageSystem;
+import adventureArena.messages.MessageSystem;
 import adventureArena.miniGameComponents.MiniGame;
 
 public class TeamManager {
@@ -41,7 +41,7 @@ public class TeamManager {
 
 	private static Team registerTeam(final String idAndTeamName, final MiniGame mg) {
 		Team team = scoreBoard.registerNewTeam(idAndTeamName);
-		team.setAllowFriendlyFire(true);
+		team.setAllowFriendlyFire(mg.isPvp()); // FFA -> all are in a "FFA TEAM"
 		team.setCanSeeFriendlyInvisibles(false);
 		return team;
 	}
@@ -60,7 +60,7 @@ public class TeamManager {
 		}
 		if (playersAroundSign.size() == 0) return;
 		if (playersAroundSign.size() <= 1 && !miniGame.isSoloPlayable()) {
-			MessageSystem.errorToGroup("You need more people for this arena.", playersAroundSign);
+			MessageSystem.errorToGroup("You need more people for this game.", playersAroundSign);
 			return;
 		}
 		if (!miniGame.isSoloPlayable() && miniGame.getNumberOfSpawnPoints() <= 1) {
@@ -69,7 +69,7 @@ public class TeamManager {
 		}
 
 
-		if (MiniGameSessions.canJoinMiniGame(miniGame, playersAroundSign) && canTeamJoinMiniGame(miniGame, teamName, playersAroundSign)) {
+		if (MiniGameSessions.canJoinMiniGame(miniGame, playersAroundSign) && teamSpawnsExist(miniGame, teamName, playersAroundSign)) {
 			if (teamName.equals(FFA_TEAM)) {
 				if (teamChallengeActive(miniGame)) {
 					MessageSystem.errorToGroup("Team-challenge pending, use team entrance.", playersAroundSign);
@@ -114,19 +114,19 @@ public class TeamManager {
 		}
 	}
 
-	static boolean canTeamJoinMiniGame(final MiniGame miniGame, final String teamName, final ArrayList<Player> players) {
+	static boolean teamSpawnsExist(final MiniGame miniGame, final String teamName, final ArrayList<Player> players) {
 		List<Vector> teamSpawns = miniGame.getSpawnPoints(teamName);
 		// SPAWNS CHECK
 		if (teamSpawns == null || teamSpawns.isEmpty()) {
 			MessageSystem.errorToGroup("No spawnpoints found for team " + teamName, players);
-			MessageSystem.sideNoteToGroup(players.size() + " players failed joining your " + miniGame.getName() + ". (no spawPoints found)", miniGame.getAllowedEditors());
+			MessageSystem.errorToGroup(players.size() + " player(s) failed joining your " + miniGame.getName() + " - no spawPoints for team " + teamName, miniGame.getAllowedEditors());
 			return false;
 		}
 		return true;
 	}
 
 	static void spawnTeam(final MiniGame miniGame, final String teamName, final ArrayList<Player> team) {
-		if (!canTeamJoinMiniGame(miniGame, teamName, team)) return;
+		if (!teamSpawnsExist(miniGame, teamName, team)) return;
 
 		List<Vector> teamSpawns = miniGame.getSpawnPoints(teamName);
 

@@ -7,8 +7,8 @@ import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import adventureArena.ConfigAccess;
-import adventureArena.MessageSystem;
 import adventureArena.enums.ConfigPaths;
+import adventureArena.messages.MessageSystem;
 import adventureArena.miniGameComponents.MiniGame;
 
 
@@ -23,7 +23,7 @@ public class MiniGameLoading {
 			MiniGame mg = MiniGame.loadFromConfig(Integer.parseInt(path));
 			if (mg != null) {
 				miniGames.add(mg);
-				if (mg.isInProgress()) {
+				if (mg.isPlaySessionActive()) {
 					MessageSystem.consoleWarn("miniGame was still in progress: '" + mg.getName() + "', cleaning up...");
 					mg.setInProgress(false);
 					mg.wipeEntities();
