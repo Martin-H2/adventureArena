@@ -351,7 +351,9 @@ public class Events implements Listener {
 		if (event.getPlayer().getGameMode().equals(GameMode.CREATIVE) && event.getAction().equals(Action.RIGHT_CLICK_BLOCK)) {
 			onClick(event.getPlayer(), event.getClickedBlock());
 		}
-		if (HubControl.isInMgHubAABB(event.getPlayer().getLocation()) && event.getClickedBlock().getType() == Material.ENDER_CHEST) {
+		if (HubControl.isInMgHubAABB(event.getPlayer().getLocation())
+			&& event.getClickedBlock() != null
+			&& event.getClickedBlock().getType() == Material.ENDER_CHEST) {
 			event.setCancelled(true);
 		}
 	}
