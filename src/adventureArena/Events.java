@@ -348,13 +348,15 @@ public class Events implements Listener {
 
 	@EventHandler
 	public void onPlayerInteract(final PlayerInteractEvent event) {
-		if (event.getPlayer().getGameMode().equals(GameMode.CREATIVE) && event.getAction().equals(Action.RIGHT_CLICK_BLOCK)) {
-			onClick(event.getPlayer(), event.getClickedBlock());
-		}
-		if (HubControl.isInMgHubAABB(event.getPlayer().getLocation())
-			&& event.getClickedBlock() != null
-			&& event.getClickedBlock().getType() == Material.ENDER_CHEST) {
-			event.setCancelled(true);
+		if (event.getAction().equals(Action.RIGHT_CLICK_BLOCK)) {
+			if (event.getPlayer().getGameMode().equals(GameMode.CREATIVE)) {
+				onClick(event.getPlayer(), event.getClickedBlock());
+			}
+			if (HubControl.isInMgHubAABB(event.getPlayer().getLocation())
+				&& event.getClickedBlock() != null
+				&& event.getClickedBlock().getType() == Material.ENDER_CHEST) {
+				event.setCancelled(true);
+			}
 		}
 	}
 

@@ -9,7 +9,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.util.Vector;
-import adventureArena.*;
+import adventureArena.InventorySaver;
+import adventureArena.ItemHelper;
+import adventureArena.PluginManagement;
+import adventureArena.TerrainHelper;
 import adventureArena.enums.ConfigPaths;
 import adventureArena.enums.PlayerState;
 import adventureArena.messages.MessageSystem;
@@ -95,13 +98,18 @@ public class MiniGameSessions {
 			ScoreManager.onPlayerLeft(mg, player);
 			if (mg.isVictory()) {
 				mg.setOver();
-				PluginManagement.executeDelayed(5, new Runnable() {
+				if (mg.getNumberOfPlayersRemaining() >= 1) {
+					PluginManagement.executeDelayed(5, new Runnable() {
 
-					@Override
-					public void run() {
-						endPlaySession(mg);
-					}
-				});
+						@Override
+						public void run() {
+							endPlaySession(mg);
+						}
+					});
+				}
+				else {
+					endPlaySession(mg);
+				}
 			}
 			HighScoreManager.updateHighScoreList(mg);
 		}
