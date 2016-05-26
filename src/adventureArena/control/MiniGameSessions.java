@@ -98,18 +98,14 @@ public class MiniGameSessions {
 			ScoreManager.onPlayerLeft(mg, player);
 			if (mg.isVictory()) {
 				mg.setOver();
-				if (mg.getNumberOfPlayersRemaining() >= 1) {
-					PluginManagement.executeDelayed(5, new Runnable() {
+				double sessionEndDelay = mg.getNumberOfPlayersRemaining() >= 1 ? 5.0 : 0.1;
+				PluginManagement.executeDelayed(sessionEndDelay, new Runnable() {
 
-						@Override
-						public void run() {
-							endPlaySession(mg);
-						}
-					});
-				}
-				else {
-					endPlaySession(mg);
-				}
+					@Override
+					public void run() {
+						endPlaySession(mg);
+					}
+				});
 			}
 			HighScoreManager.updateHighScoreList(mg);
 		}

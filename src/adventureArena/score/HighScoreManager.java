@@ -55,7 +55,7 @@ public class HighScoreManager {
 						String playerName = entry.getKey();
 						long score = Math.round(entry.getValue());
 						if (globalLineIndex == 1) {
-							color = ChatColor.GREEN;
+							color = ChatColor.BLUE;
 							String oldKing = mg.getKing();
 							if (!playerName.equals(oldKing)) {
 								MessageSystem.broadcast(ChatColor.GOLD + "[" + mg.getName() + "] NEW HIGHSCORE LEADER: " + ChatColor.RED + playerName + " with " + score);
@@ -63,7 +63,7 @@ public class HighScoreManager {
 							}
 						}
 						else if (globalLineIndex == 2) {
-							color = ChatColor.DARK_GREEN;
+							color = ChatColor.DARK_BLUE;
 						}
 						signState.setLine(globalLineIndex % 4, ChatColor.GRAY.toString() + globalLineIndex + "." + color.toString() + playerName.substring(0, Math.min(10, playerName.length())) + ": " + score);
 					}
