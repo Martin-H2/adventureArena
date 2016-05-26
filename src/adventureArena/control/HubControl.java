@@ -12,7 +12,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
-import adventureArena.*;
+import adventureArena.AA_SignCommand;
+import adventureArena.ConfigAccess;
+import adventureArena.InventorySaver;
+import adventureArena.PluginManagement;
 import adventureArena.enums.ConfigPaths;
 import adventureArena.enums.PlayerState;
 import adventureArena.messages.MessageSystem;
@@ -20,14 +23,16 @@ import adventureArena.messages.MessageSystem;
 
 public class HubControl {
 
+	public final static String		DISABLE_CLIENT_RADAR_MAGIC_SUFFIX	= " §3 §6 §3 §6 §3 §6 §e";
+	public final static String		DISABLE_CLIENT_CAVEMAP_MAGIC_SUFFIX	= " §3 §6 §3 §6 §3 §6 §d";
 
-	static final Vector				MINIGAME_HUB_MIN		= new Vector(97, 9, -253);
-	static final Vector				MINIGAME_HUB_MAX		= new Vector(303, 47, -145);
+	static final Vector				MINIGAME_HUB_MIN					= new Vector(97, 9, -253);
+	static final Vector				MINIGAME_HUB_MAX					= new Vector(303, 47, -145);
 
-	public static final GameMode	MINIGAME_HUB_GAMEMODE	= GameMode.ADVENTURE;
-	static final PotionEffect		PERMANENT_NIGHTVISION	= new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 0, true, false);
-	static final PotionEffect		PERMANENT_SPEED			= new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1, true, false);
-	static final PotionEffect		PERMANENT_SATURATION	= new PotionEffect(PotionEffectType.SATURATION, Integer.MAX_VALUE, 0, true, false);
+	public static final GameMode	MINIGAME_HUB_GAMEMODE				= GameMode.ADVENTURE;
+	static final PotionEffect		PERMANENT_NIGHTVISION				= new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 0, true, false);
+	static final PotionEffect		PERMANENT_SPEED						= new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1, true, false);
+	static final PotionEffect		PERMANENT_SATURATION				= new PotionEffect(PotionEffectType.SATURATION, Integer.MAX_VALUE, 0, true, false);
 
 
 
@@ -45,6 +50,7 @@ public class HubControl {
 				HubControl.becomeSpectator(player, false, target, true);
 				player.setBedSpawnLocation(target, true);
 				MessageSystem.sideNote("MiniGames documentation @forum: " + AA_SignCommand.WIKI_HELP, player);
+				MessageSystem.sideNote("Please don't use entity-radars in pvp." + DISABLE_CLIENT_RADAR_MAGIC_SUFFIX + DISABLE_CLIENT_CAVEMAP_MAGIC_SUFFIX, player);
 			}
 		}
 	}
