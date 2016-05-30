@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffect;
+import adventureArena.control.HubControl;
 import adventureArena.enums.ConfigPaths;
 import adventureArena.messages.MessageSystem;
 
@@ -80,7 +81,7 @@ public class InventorySaver {
 				double x = config.getDouble(playerDataRootPath + "." + ConfigPaths.bedSpawnLocationX);
 				double y = config.getDouble(playerDataRootPath + "." + ConfigPaths.bedSpawnLocationY);
 				double z = config.getDouble(playerDataRootPath + "." + ConfigPaths.bedSpawnLocationZ);
-				player.setBedSpawnLocation(new Location(player.getWorld(), x, y, z), true);
+				player.setBedSpawnLocation(new Location(HubControl.getMiniGameHubWorld(), x, y, z), true);
 			}
 
 			ItemStack[] items = inventory.getContents();

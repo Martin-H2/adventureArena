@@ -1,7 +1,6 @@
 package adventureArena;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.bukkit.Location;
@@ -112,21 +111,24 @@ public class TerrainHelper {
 
 	public static boolean loadMinigameFromSchematic(final int id, final World world) {
 		File file = getMiniGameSchematicFile(id);
-		EditSession es = new EditSession(new BukkitWorld(world), -1);
-		es.enableQueue();
-		es.setFastMode(true);
+		if (file.exists()) {
+			EditSession es = new EditSession(new BukkitWorld(world), -1);
+			es.enableQueue();
+			es.setFastMode(true);
 
-		try {
-			CuboidClipboard cc = CuboidClipboard.loadSchematic(file);
-			cc.paste(es, cc.getOrigin(), false, true);
-			//cc.place(es, null, true);
+			try {
+				CuboidClipboard cc = CuboidClipboard.loadSchematic(file);
+				cc.paste(es, cc.getOrigin(), false, true);
+				//cc.place(es, null, true);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+				return false;
+			}
+			es.flushQueue();
+			return true;
 		}
-		catch (Exception e) {
-			e.printStackTrace();
-			return false;
-		}
-		es.flushQueue();
-		return true;
+		return false;
 	}
 
 
@@ -137,14 +139,6 @@ public class TerrainHelper {
 			miniGameSchemFolder.mkdirs();
 		}
 		File mgf = new File(miniGameSchemFolder, File.separator + "miniGame_" + id + ".schematic");
-		if (!mgf.exists()) {
-			try {
-				mgf.createNewFile();
-			}
-			catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
 		return mgf;
 	}
 

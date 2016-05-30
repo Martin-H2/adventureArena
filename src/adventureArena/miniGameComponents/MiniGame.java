@@ -44,7 +44,7 @@ public class MiniGame {
 	private boolean							needsEnvironmentBackup	= true;
 
 	private boolean							isEditSessionActive		= false;
-	private boolean							isPlaySessionActive				= false;
+	private boolean							isPlaySessionActive		= false;
 	private World							world					= null;
 
 	//play session.
@@ -435,7 +435,7 @@ public class MiniGame {
 	}
 
 	public void setInProgress(final boolean inProgress) {
-		this.isPlaySessionActive = inProgress;
+		isPlaySessionActive = inProgress;
 		persist();
 	}
 
@@ -451,7 +451,7 @@ public class MiniGame {
 			return true;
 		}
 		else {
-			MessageSystem.errorToGroup("...backup failed!", getAllowedEditors());
+			MessageSystem.errorToGroup("Could not save MiniGame to schematic file. Inform admin !", getAllowedEditors());
 			return false;
 		}
 
@@ -465,7 +465,7 @@ public class MiniGame {
 			return true;
 		}
 		else {
-			MessageSystem.errorToGroup("...restore failed!", getAllowedEditors());
+			MessageSystem.errorToGroup("Could not load MiniGame backup from schematic.", getAllowedEditors());
 			return false;
 		}
 	}

@@ -36,7 +36,7 @@ public class MiniGameSessions {
 		PlayerControl.clearInventoryAndBuffs(p);
 		p.setGameMode(HubControl.MINIGAME_HUB_GAMEMODE);
 		p.setBedSpawnLocation(miniGame.getSpectatorRespawnPoint(), true);
-		PlayerControl.teleportSafe(p, TerrainHelper.getAirBlockAboveGround(spawnPoint.toLocation(p.getWorld()), true, miniGame), miniGame.getPlayableAreaMidpoint());
+		PlayerControl.teleportSafe(p, TerrainHelper.getAirBlockAboveGround(spawnPoint.toLocation(miniGame.getWorld()), true, miniGame), miniGame.getPlayableAreaMidpoint());
 		PlayerControl.setPlayerState(p, PlayerState.IS_PLAYING, miniGame);
 		miniGame.addPlayer(teamName, p);
 		for (ItemStack item: miniGame.getSpawnEquip()) {

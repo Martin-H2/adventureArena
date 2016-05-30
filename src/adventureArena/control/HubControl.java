@@ -40,7 +40,7 @@ public class HubControl {
 		if (!HubControl.isInMiniGameHub(player)) {
 			FileConfiguration config = ConfigAccess.getPluginConfig();
 			if (target == null) {
-				target = HubControl.getMiniGameHubSpawn(player.getWorld());
+				target = HubControl.getMiniGameHubSpawn();
 			}
 			if (target != null && InventorySaver.saveInventoryAndPlayerMeta(player, ConfigPaths.savedPlayerData)) {
 				player.setLevel(0);
@@ -59,7 +59,7 @@ public class HubControl {
 		PlayerControl.setPlayerState(player, PlayerState.IS_WATCHING, null);
 		player.setGameMode(HubControl.MINIGAME_HUB_GAMEMODE);
 		if (optionalBackportLocation == null) {
-			optionalBackportLocation = HubControl.getMiniGameHubSpawn(player.getWorld());
+			optionalBackportLocation = HubControl.getMiniGameHubSpawn();
 		}
 		if (!onDeath) {
 			PlayerControl.clearInventoryAndBuffs(player);
@@ -75,7 +75,7 @@ public class HubControl {
 		MiniGameSessions.kickIfInsideMiniGame(player);
 		FileConfiguration config = ConfigAccess.getPluginConfig();
 		if (target == null) {
-			target = player.getWorld().getSpawnLocation();
+			target = getMiniGameHubWorld().getSpawnLocation();
 		}
 		config.set(ConfigPaths.isInMiniGameHub + "." + player.getName(), false);
 		config.set(ConfigPaths.playerStates + "." + player.getName(), null);
@@ -172,7 +172,7 @@ public class HubControl {
 		return gameHubSpectators;
 	}
 
-	public static Location getMiniGameHubSpawn(final World world) {
+	public static Location getMiniGameHubSpawn() {
 		FileConfiguration config = ConfigAccess.getPluginConfig();
 		if (!config.contains(ConfigPaths.miniGameHubSpawnX)) {
 			MessageSystem.consoleError("miniGameHubSpawn not found in config");
@@ -181,7 +181,12 @@ public class HubControl {
 		double x = config.getDouble(ConfigPaths.miniGameHubSpawnX);
 		double y = config.getDouble(ConfigPaths.miniGameHubSpawnY);
 		double z = config.getDouble(ConfigPaths.miniGameHubSpawnZ);
-		return new Location(world, x, y, z);
+		return new Location(getMiniGameHubWorld(), x, y, z);
+	}
+
+	public static World getMiniGameHubWorld() {
+		FileConfiguration config = ConfigAccess.getPluginConfig();
+		return Bukkit.getWorld(config.getString(ConfigPaths.miniGameHubWorldName));
 	}
 
 }
