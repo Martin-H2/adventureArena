@@ -411,7 +411,7 @@ public class AA_SignCommand {
 				}
 				double delay = 0;
 				double delayRngRange = 0;
-				boolean explode = false;
+				float explosionPower = 0.0f;
 				int count = 1;
 				boolean isPerPlayerCount = false;
 				int newScore = -1;
@@ -435,7 +435,14 @@ public class AA_SignCommand {
 						parameterMap.remove("delay");
 					}
 					if (parameterMap.containsKey("explode")) {
-						explode = !parameterMap.get("explode").equals("0");
+						try {
+							explosionPower = Float.parseFloat(parameterMap.get("explode"));
+							if (explosionPower < 0 || explosionPower > 2000) throw new IllegalArgumentException();
+						}
+						catch (Exception e) {
+							failAndBreak(optionalCreator, "explosion power must be between 0 and 2000  (4 equals TNT)");
+							return false;
+						}
 						parameterMap.remove("explode");
 					}
 					if (parameterMap.containsKey("count")) {
@@ -459,6 +466,11 @@ public class AA_SignCommand {
 						}
 						String[] hpLifeTime = parameterMap.get(spawnedObject).split(DELIM_KOMMA);
 						double hp = Double.parseDouble(hpLifeTime[0]);
+						if (hp < 0 || hp > 2048) {
+							failAndBreak(optionalCreator, "hp must be between 0 and 2048");
+							return false;
+						}
+
 						double lifeTime = -1;
 						if (hpLifeTime.length == 2) {
 							lifeTime = Double.parseDouble(hpLifeTime[1]);
@@ -476,7 +488,7 @@ public class AA_SignCommand {
 						mt.setCount(count);
 						mt.setPerPlayerCount(isPerPlayerCount);
 						mt.setLifeTime(lifeTime);
-						mt.setExplodeOnDeath(explode);
+						mt.setExplosionPower(explosionPower);
 						miniGame.addTrigger(mt);
 					}
 				}

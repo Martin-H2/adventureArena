@@ -30,7 +30,7 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 	private double				delayRndRange		= 0;
 	private double				hp					= -1;
 	private double				lifeTime			= -1;
-	private boolean				explodeOnDeath		= false;
+	private float				explosionPower		= 0f;
 	private int					count				= 1;
 	private boolean				isPerPlayerCount	= false;
 
@@ -82,7 +82,12 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 		delayRndRange = (double) serializedForm.get("delayRndRange");
 		hp = (double) serializedForm.get("hp");
 		lifeTime = (double) serializedForm.get("lifeTime");
-		explodeOnDeath = (boolean) serializedForm.get("explodeOnDeath");
+		if (serializedForm.containsKey("explodeOnDeath")) { //supporting old minigames with boolean values
+			explosionPower = (boolean) serializedForm.get("explodeOnDeath") ? 1f : 0f;
+		}
+		if (serializedForm.containsKey("explosionPower")) {
+			explosionPower = (float) serializedForm.get("explosionPower");
+		}
 		newScore = (int) serializedForm.get("newScore");
 		if (serializedForm.containsKey("count")) {
 			count = (int) serializedForm.get("count");
@@ -105,7 +110,7 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 		serializedForm.put("delayRndRange", delayRndRange);
 		serializedForm.put("hp", hp);
 		serializedForm.put("lifeTime", lifeTime);
-		serializedForm.put("explodeOnDeath", explodeOnDeath);
+		serializedForm.put("explosionPower", explosionPower);
 		serializedForm.put("newScore", newScore);
 		serializedForm.put("count", count);
 		serializedForm.put("isPerPlayerCount", isPerPlayerCount);
@@ -155,7 +160,7 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 
 		if (blockType != Material.AIR) {
 			// SPAWN BLOCKS
-			Runnable spawnTask = new TimedBlockTask(w, attachedBlockPosition, blockType, hp, explodeOnDeath, lifeTime, mg, runningTasks, count);
+			Runnable spawnTask = new TimedBlockTask(w, attachedBlockPosition, blockType, hp, explosionPower, lifeTime, mg, runningTasks, count);
 			if (delay <= 0) {
 				spawnTask.run();
 			}
@@ -165,7 +170,7 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 		}
 		else {
 			// SPAWN ENTITIES
-			AbstractPeriodicTask spawnTask = new PeriodicEntityTask(w, attachedBlockPosition, entityType, hp, explodeOnDeath, lifeTime, mg, runningTasks);
+			AbstractPeriodicTask spawnTask = new PeriodicEntityTask(w, attachedBlockPosition, entityType, hp, explosionPower, lifeTime, mg, runningTasks);
 			if (delay <= 0 && count == 1) {
 				spawnTask.lastTick();
 			}
@@ -216,11 +221,11 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 	}
 
 	public boolean isExplodeOnDeath() {
-		return explodeOnDeath;
+		return explosionPower > 0f;
 	}
 
-	public void setExplodeOnDeath(final boolean explodeOnDeath) {
-		this.explodeOnDeath = explodeOnDeath;
+	public void setExplosionPower(final float explode) {
+		explosionPower = explode;
 	}
 
 	public void setCount(final int count) {

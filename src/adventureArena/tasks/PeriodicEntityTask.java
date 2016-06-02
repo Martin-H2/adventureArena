@@ -8,7 +8,6 @@ import org.bukkit.World;
 import org.bukkit.entity.Creature;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
@@ -22,20 +21,20 @@ public class PeriodicEntityTask extends AbstractPeriodicTask {
 	private final Location		airBlockAboveAttachedBlockTelePos;
 	private final EntityType	entityType;
 	private final double		hp;
-	private final boolean		explodeOnDeath;
+	private final float			explosionPower;
 	private final double		lifeTime;
-	private final MiniGame	miniGame;
+	private final MiniGame		miniGame;
 	private final List<Integer>	runningTasks;
 
 
 
-	public PeriodicEntityTask(World w, Vector attachedBlockPosition, EntityType entityType, double hp, boolean explodeOnDeath, double lifeTime, MiniGame mg, List<Integer> runningTasks) {
+	public PeriodicEntityTask(World w, Vector attachedBlockPosition, EntityType entityType, double hp, float explosionPower, double lifeTime, MiniGame mg, List<Integer> runningTasks) {
 		super();
 		world = w;
 		airBlockAboveAttachedBlockTelePos = TerrainHelper.getAirBlockAboveGroundTelePos(attachedBlockPosition.toLocation(w), true, mg);
 		this.entityType = entityType;
 		this.hp = hp;
-		this.explodeOnDeath = explodeOnDeath;
+		this.explosionPower = explosionPower;
 		this.lifeTime = lifeTime;
 		miniGame = mg;
 		this.runningTasks = runningTasks;
@@ -49,7 +48,7 @@ public class PeriodicEntityTask extends AbstractPeriodicTask {
 			creature.setMaxHealth(hp);
 			creature.setHealth(hp);
 			creature.setTarget(miniGame.getRandomPlayer());
-			if (explodeOnDeath) {
+			if (explosionPower > 0f) {
 				EntityEquipment ee = creature.getEquipment();
 				ee.setHelmet(new ItemStack(Material.PUMPKIN));
 			}
@@ -60,7 +59,7 @@ public class PeriodicEntityTask extends AbstractPeriodicTask {
 
 				@Override
 				public void tick() {
-					if (explodeOnDeath) {
+					if (explosionPower > 0f) {
 						ChatColor cc = getNumberOfExecutionsLeft() < 3 ? ChatColor.RED : ChatColor.BLUE;
 						entity.setCustomName(cc.toString() + getNumberOfExecutionsLeft());
 						//AA_MessageSystem.consoleDebug("EXPLODE: " + cc.toString() + getNumberOfExecutionsLeft());
@@ -70,14 +69,9 @@ public class PeriodicEntityTask extends AbstractPeriodicTask {
 				@Override
 				public void lastTick() {
 					if (entity.isValid()) {
-						if (explodeOnDeath) {
-							float power = 4;
-							if (entity instanceof LivingEntity) {
-								LivingEntity monster = (LivingEntity) entity;
-								power *= (float) (monster.getHealth() / monster.getMaxHealth());
-							}
-							entity.setCustomName("Exploding " + entity.getName());
-							entity.getWorld().createExplosion(entity.getLocation(), power);
+						if (explosionPower > 0f) {
+							//entity.setCustomName("Exploding " + entity.getName());
+							entity.getWorld().createExplosion(entity.getLocation(), explosionPower);
 						}
 						entity.remove();
 					}

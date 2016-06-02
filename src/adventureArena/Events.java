@@ -20,6 +20,7 @@ import org.bukkit.event.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.player.*;
+import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.event.world.PortalCreateEvent;
 import org.bukkit.projectiles.ProjectileSource;
 import adventureArena.control.*;
@@ -234,11 +235,15 @@ public class Events implements Listener {
 	}
 
 	@EventHandler (priority = EventPriority.HIGHEST)
-	public void onPlayerTeleport(final PlayerTeleportEvent e) {
-		if ((PlayerControl.isPlayingMiniGame(e.getPlayer()) || PlayerControl.isEditingMiniGame(e.getPlayer()))
-			&& !MiniGameLoading.getMiniGameForPlayer(e.getPlayer()).isInsidePlayableBounds(e.getTo())) {
-			e.setCancelled(true);
+	public void onPlayerTeleport(final PlayerTeleportEvent event) {
+		if ((PlayerControl.isPlayingMiniGame(event.getPlayer()) || PlayerControl.isEditingMiniGame(event.getPlayer()))
+			&& !MiniGameLoading.getMiniGameForPlayer(event.getPlayer()).isInsidePlayableBounds(event.getTo())) {
+			event.setCancelled(true);
 		}
+		if (HubControl.isInMgHubAABB(event.getFrom()) != HubControl.isInMgHubAABB(event.getTo()) && event.getCause() != TeleportCause.PLUGIN) {
+			event.setCancelled(true);
+		}
+
 	}
 
 	//	@EventHandler

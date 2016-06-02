@@ -8,8 +8,8 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.util.Vector;
 import adventureArena.AA_SignCommand;
-import adventureArena.TerrainHelper;
 import adventureArena.PluginManagement;
+import adventureArena.TerrainHelper;
 import adventureArena.miniGameComponents.MiniGame;
 
 
@@ -19,22 +19,22 @@ public class TimedBlockTask implements Runnable {
 	private final Block				airBlockAboveAttachedBlock;
 	private final Material			blockType;
 	private final double			hp;
-	private final boolean			explodeOnDeath;
+	private final float				explosionPower;
 	private final double			lifeTime;
-	private final MiniGame		miniGame;
+	private final MiniGame			miniGame;
 	private final List<Integer>		runningTasks;
 	private final int				count;
 	private final ArrayList<Block>	spawnedBlocks;
 
 
 
-	public TimedBlockTask(World w, Vector attachedBlockPosition, Material blockType, double hp, boolean explodeOnDeath, double lifeTime, MiniGame mg, List<Integer> runningTasks, int count) {
+	public TimedBlockTask(World w, Vector attachedBlockPosition, Material blockType, double hp, float explosionPower, double lifeTime, MiniGame mg, List<Integer> runningTasks, int count) {
 		super();
 		world = w;
 		airBlockAboveAttachedBlock = TerrainHelper.getAirBlockAboveGround(attachedBlockPosition.toLocation(w), true, mg);
 		this.blockType = blockType;
 		this.hp = hp;
-		this.explodeOnDeath = explodeOnDeath;
+		this.explosionPower = explosionPower;
 		this.lifeTime = lifeTime;
 		miniGame = mg;
 		this.runningTasks = runningTasks;
@@ -57,8 +57,8 @@ public class TimedBlockTask implements Runnable {
 				public void run() {
 					for (Block b: spawnedBlocks) {
 						b.setType(Material.AIR);
-						if (explodeOnDeath) {
-							world.createExplosion(b.getLocation(), 4);
+						if (explosionPower > 0f) {
+							world.createExplosion(b.getLocation(), explosionPower);
 						}
 					}
 				}
