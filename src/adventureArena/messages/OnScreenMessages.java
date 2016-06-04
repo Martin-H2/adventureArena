@@ -16,7 +16,7 @@ public class OnScreenMessages {
 		long dmg = Math.round(event.getFinalDamage());
 		if (dmg > 0) {
 			sendActionBarMessage(attacker, ChatColor.DARK_RED + victim.getName() + ":" + ChatColor.RED + "  -" + dmg
-				+ "  (" + Math.round(victim.getHealth() - event.getFinalDamage()) + "/" + Math.round(victim.getMaxHealth()) + ")", 2.0);
+				+ "  (" + Math.round(victim.getHealth() - event.getFinalDamage()) + "/" + Math.round(victim.getMaxHealth()) + ")");
 		}
 		// ================= FOR DEBUGGING ==========================
 		//		EntityDamageEvent le = victim.getLastDamageCause();
@@ -68,6 +68,10 @@ public class OnScreenMessages {
 		//BountifulAPI.sendActionBar(player, message);
 		//player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
 		ActionBarAPI.sendActionBar(player, message, (int) (durationSec * 20.0));
+	}
+
+	public static void sendActionBarMessage(Player player, String message) {
+		ActionBarAPI.sendActionBar(player, message);
 	}
 
 	public static void sendTitleAndSubtitle(Player player, double fadeInSec, double holdSec, double fadeOutSec, String title, String subTitle) {
