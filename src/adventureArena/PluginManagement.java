@@ -10,6 +10,7 @@ import adventureArena.commands.MgCommands;
 import adventureArena.commands.ServerInfoCommand;
 import adventureArena.control.HubControl;
 import adventureArena.control.MiniGameLoading;
+import adventureArena.control.MiniGameSessions;
 import adventureArena.messages.MessageSystem;
 import adventureArena.miniGameComponents.MiniGameTrigger;
 import adventureArena.miniGameComponents.SpawnEquip;
@@ -44,6 +45,9 @@ public class PluginManagement extends JavaPlugin {
 
 		MiniGameLoading.loadMiniGamesFromConfig();
 		MessageSystem.consoleInfo("loaded " + MiniGameLoading.getNumberOfMiniGames() + " miniGame configs.");
+		for (Player p: Bukkit.getOnlinePlayers()) {
+			MiniGameSessions.kickIfInsideMiniGame(p);
+		}
 	}
 
 

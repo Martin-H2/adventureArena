@@ -69,4 +69,13 @@ public class Util {
 	}
 
 
+
+	public static String stripExtension(String filename) {
+		if (filename == null) return null;
+		int pos = filename.lastIndexOf(".");
+		if (pos == -1) return filename;
+		return filename.substring(0, pos);
+	}
+
+
 }

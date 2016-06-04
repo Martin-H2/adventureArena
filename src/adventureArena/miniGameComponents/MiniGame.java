@@ -35,7 +35,7 @@ public class MiniGame {
 	private final Map<String, List<Vector>>	spawnPoints				= new HashMap<String, List<Vector>>();
 	//private final List<ItemStack> spawnEquip = new ArrayList<ItemStack>();
 	private final List<SpawnEquip>			spawnEquipDefinitions	= new ArrayList<SpawnEquip>();
-	private final List<String>				allowedEditors			= new ArrayList<String>();
+	private List<String>					allowedEditors			= new ArrayList<String>();
 	private final List<Vector>				highScoreSignLocations	= new ArrayList<Vector>();
 	private final List<MiniGameTrigger>		rangedTriggers			= new ArrayList<MiniGameTrigger>();
 	private final List<MiniGameTrigger>		startTriggers			= new ArrayList<MiniGameTrigger>();
@@ -88,49 +88,48 @@ public class MiniGame {
 		set(ConfigPaths.startMonsterTriggers, startTriggers);
 		set(ConfigPaths.allowedEditors, allowedEditors);
 		set(ConfigPaths.highScoreSignLocations, highScoreSignLocations);
-		ConfigAccess.saveMiniGameConfig();
+		ConfigAccess.saveMiniGameConfig(id);
 		needsPersisting = false;
 	}
 
 	private void set(final String miniGameSubPath, final Object obj) {
-		ConfigAccess.getMiniGameConfig().set(id + "." + miniGameSubPath, obj);
+		ConfigAccess.getMiniGameConfig(id).set(miniGameSubPath, obj);
 		needsPersisting = true;
 	}
 
 	public static MiniGame loadFromConfig(final int id) {
-		FileConfiguration cfg = ConfigAccess.getMiniGameConfig();
-		String miniGameRootPath = String.valueOf(id);
-		if (!cfg.contains(miniGameRootPath)) return null;
-		MiniGame mg = new MiniGame(id, Bukkit.getWorld(cfg.getString(miniGameRootPath + "." + ConfigPaths.worldName, "3gd")));
-		mg.needsEnvironmentBackup = cfg.getBoolean(miniGameRootPath + "." + ConfigPaths.needsEnvironmentBackup, true);
-		mg.isEditSessionActive = cfg.getBoolean(miniGameRootPath + "." + ConfigPaths.lockedByEditSession, false);
-		mg.isPlaySessionActive = cfg.getBoolean(miniGameRootPath + "." + ConfigPaths.inProgress, false);
-		mg.setSouthEastMax(cfg.getVector(miniGameRootPath + "." + ConfigPaths.southEastMax, null));
-		mg.setNorthWestMin(cfg.getVector(miniGameRootPath + "." + ConfigPaths.northWestMin, null));
-		mg.name = cfg.getString(miniGameRootPath + "." + ConfigPaths.name, "newMiniGame");
-		mg.king = cfg.getString(miniGameRootPath + "." + ConfigPaths.king, null);
-		mg.pvpDamage = cfg.getBoolean(miniGameRootPath + "." + ConfigPaths.pvpDamage, false);
-		mg.scoreMode = HighScoreMode.valueOf(cfg.getString(miniGameRootPath + "." + ConfigPaths.scoreMode, HighScoreMode.ScoreByCommand.toString()));
-		//fillSpawnPointMap(miniGameRootPath + "." + AA_ConfigPaths.spawnPoints, mg);
-		ConfigurationSection spawns = cfg.getConfigurationSection(miniGameRootPath + "." + ConfigPaths.spawnPoints);
+		if (!ConfigAccess.miniGameConfigFileExists(id)) return null;
+		FileConfiguration cfg = ConfigAccess.getMiniGameConfig(id);
+		MiniGame mg = new MiniGame(id, Bukkit.getWorld(cfg.getString(ConfigPaths.worldName, "world_build")));
+		mg.needsEnvironmentBackup = cfg.getBoolean(ConfigPaths.needsEnvironmentBackup, true);
+		mg.isEditSessionActive = cfg.getBoolean(ConfigPaths.lockedByEditSession, false);
+		mg.isPlaySessionActive = cfg.getBoolean(ConfigPaths.inProgress, false);
+		mg.setSouthEastMax(cfg.getVector(ConfigPaths.southEastMax, null));
+		mg.setNorthWestMin(cfg.getVector(ConfigPaths.northWestMin, null));
+		mg.name = cfg.getString(ConfigPaths.name, "newMiniGame");
+		mg.king = cfg.getString(ConfigPaths.king, null);
+		mg.pvpDamage = cfg.getBoolean(ConfigPaths.pvpDamage, false);
+		mg.scoreMode = HighScoreMode.valueOf(cfg.getString(ConfigPaths.scoreMode, HighScoreMode.ScoreByCommand.toString()));
+		//fillSpawnPointMap( AA_ConfigPaths.spawnPoints, mg);
+		ConfigurationSection spawns = cfg.getConfigurationSection(ConfigPaths.spawnPoints);
 		if (spawns != null) {
 			for (String teamPath: spawns.getKeys(false)) {
 				List<Vector> ts = new ArrayList<Vector>();
-				fillCollection(miniGameRootPath + "." + ConfigPaths.spawnPoints + "." + teamPath, ts);
+				fillCollection(ConfigPaths.spawnPoints + "." + teamPath, ts, id);
 				mg.spawnPoints.put(teamPath, ts);
 			}
 		}
-		fillCollection(miniGameRootPath + "." + ConfigPaths.spawnEquip, mg.getSpawnEquipDefinitions());
-		fillCollection(miniGameRootPath + "." + ConfigPaths.rangedMonsterTriggers, mg.rangedTriggers);
-		fillCollection(miniGameRootPath + "." + ConfigPaths.startMonsterTriggers, mg.startTriggers);
-		fillCollection(miniGameRootPath + "." + ConfigPaths.allowedEditors, mg.allowedEditors);
-		fillCollection(miniGameRootPath + "." + ConfigPaths.highScoreSignLocations, mg.highScoreSignLocations);
+		fillCollection(ConfigPaths.spawnEquip, mg.getSpawnEquipDefinitions(), id);
+		fillCollection(ConfigPaths.rangedMonsterTriggers, mg.rangedTriggers, id);
+		fillCollection(ConfigPaths.startMonsterTriggers, mg.startTriggers, id);
+		fillCollection(ConfigPaths.allowedEditors, mg.allowedEditors, id);
+		fillCollection(ConfigPaths.highScoreSignLocations, mg.highScoreSignLocations, id);
 		mg.needsPersisting = false;
 		return mg;
 	}
 
-	private static <T> void fillCollection(final String path, final Collection<T> collection) {
-		List<?> cfgCollection = ConfigAccess.getMiniGameConfig().getList(path);
+	private static <T> void fillCollection(final String path, final Collection<T> collection, int id) {
+		List<?> cfgCollection = ConfigAccess.getMiniGameConfig(id).getList(path);
 		if (cfgCollection instanceof Collection<?>) {
 			for (Object cfgElement: (Collection<?>) cfgCollection) {
 				try {
@@ -337,7 +336,7 @@ public class MiniGame {
 		return items;
 	}
 
-	public List<Player> getAllowedEditors() {
+	public List<Player> getOnlineAllowedEditors() {
 		ArrayList<Player> allowedEditors = new ArrayList<Player>();
 		for (String name: this.allowedEditors) {
 			Player p = Bukkit.getPlayer(name);
@@ -353,6 +352,17 @@ public class MiniGame {
 			allowedEditors.add(name);
 			needsPersisting = true;
 		}
+	}
+
+
+	public List<String> getAllowedEditors() {
+		return allowedEditors;
+	}
+
+
+	public void setAllowedEditors(List<String> allowedEditors) {
+		this.allowedEditors = allowedEditors;
+		needsPersisting = true;
 	}
 
 	public void removeAllowedEditor(final String name) {
@@ -382,6 +392,11 @@ public class MiniGame {
 				HighScoreManager.updateHighScoreList(mg);
 			}
 		});
+	}
+
+	public void addHighScoreSignLocations(List<Vector> highScoreSignLocations) {
+		this.highScoreSignLocations.addAll(highScoreSignLocations);
+		needsPersisting = true;
 	}
 
 	public void unRegisterHighScoreSignLocation(final Location location) {
@@ -443,7 +458,7 @@ public class MiniGame {
 
 	//################## Environment ######################
 
-	public boolean doEnvironmentBackup() {
+	public boolean saveEnvironmentBackup() {
 		//AA_MessageSystem.sideNoteForGroup("Saving environment backup for '" + name + "' (id:" + id + ")", getPlayersInArea());
 		if (TerrainHelper.saveMiniGameToSchematic(getNorthWestMin(), getSouthEastMax(), id, world)) {
 			needsEnvironmentBackup = false;
@@ -451,13 +466,13 @@ public class MiniGame {
 			return true;
 		}
 		else {
-			MessageSystem.errorToGroup("Could not save MiniGame to schematic file. Inform admin !", getAllowedEditors());
+			MessageSystem.errorToGroup("Could not save MiniGame to schematic file. Inform admin !", getOnlineAllowedEditors());
 			return false;
 		}
 
 	}
 
-	public boolean restoreEnvironmentBackup() {
+	public boolean loadEnvironmentBackup() {
 		//AA_MessageSystem.sideNoteForGroup("Loading environment backup for '" + name + "' (id:" + id + ")", getPlayersInArea());
 		if (TerrainHelper.loadMinigameFromSchematic(id, world)) {
 			needsEnvironmentBackup = false;
@@ -465,7 +480,7 @@ public class MiniGame {
 			return true;
 		}
 		else {
-			MessageSystem.errorToGroup("Could not load MiniGame backup from schematic.", getAllowedEditors());
+			MessageSystem.errorToGroup("Could not load MiniGame backup from schematic.", getOnlineAllowedEditors());
 			return false;
 		}
 	}
@@ -587,10 +602,20 @@ public class MiniGame {
 			t.unregister();
 		}
 		for (MiniGameTrigger mt: startTriggers) {
-			mt.reset();
+			if (mt != null) {
+				mt.reset();
+			}
+			else {
+				MessageSystem.consoleError("MiniGameTrigger IS NULL ! " + startTriggers.size());
+			}
 		}
 		for (MiniGameTrigger mt: rangedTriggers) {
-			mt.reset();
+			if (mt != null) {
+				mt.reset();
+			}
+			else {
+				MessageSystem.consoleError("MiniGameTrigger IS NULL ! " + startTriggers.size());
+			}
 		}
 	}
 
@@ -725,7 +750,7 @@ public class MiniGame {
 		isPlaySessionActive = false;
 		persist();
 		TerrainHelper.resetMiniGameRoom(this);
-		doEnvironmentBackup();
+		saveEnvironmentBackup();
 	}
 
 	public Vector getPlayableAreaMidpoint() {

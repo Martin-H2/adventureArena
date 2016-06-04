@@ -2,6 +2,8 @@ package adventureArena;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import adventureArena.messages.MessageSystem;
@@ -9,19 +11,21 @@ import adventureArena.messages.MessageSystem;
 
 public class ConfigAccess {
 
-	private static final String			MINIGAMES_CONFIGNAME			= "miniGames.yml";
-	private static File					minigamesConfigFile				= null;
-	private static YamlConfiguration	minigamesConfig					= null;
+	//	private static final String			MINIGAMES_CONFIGNAME			= "miniGames.yml";
+	//	private static File					minigamesConfigFile				= null;
+	//	private static YamlConfiguration	minigamesConfig					= null;
+	private static final String						MINIGAMES_CONFIG_FOLDER			= "miniGameConfigs";
+	private static Map<Integer, YamlConfiguration>	minigamesConfigs				= new HashMap<Integer, YamlConfiguration>();
 
-	private static final String			HIGHSCORES_CONFIGNAME			= "highScores.yml";
-	private static File					highScoreConfigFile				= null;
-	private static YamlConfiguration	highScoreConfig					= null;
-	private static boolean				highScoreConfigNeedsSaving		= false;
-	private static int					highScoreSavingTaskId			= -1;
+	private static final String						HIGHSCORES_CONFIGNAME			= "highScores.yml";
+	private static File								highScoreConfigFile				= null;
+	private static YamlConfiguration				highScoreConfig					= null;
+	private static boolean							highScoreConfigNeedsSaving		= false;
+	private static int								highScoreSavingTaskId			= -1;
 
-	private static final String			SAVED_INVENTORIES_CONFIG_NAME	= "savedPlayerInventories.yml";
-	private static File					savedInventoriesConfigFile		= null;
-	private static YamlConfiguration	savedInventoriesConfig			= null;
+	private static final String						SAVED_INVENTORIES_CONFIG_NAME	= "savedPlayerInventories.yml";
+	private static File								savedInventoriesConfigFile		= null;
+	private static YamlConfiguration				savedInventoriesConfig			= null;
 
 
 
@@ -35,24 +39,51 @@ public class ConfigAccess {
 
 
 
-	public static FileConfiguration getMiniGameConfig() {
-		if (minigamesConfig == null) {
-			minigamesConfigFile = new File(getConfigFolder(), MINIGAMES_CONFIGNAME);
-			minigamesConfig = YamlConfiguration.loadConfiguration(minigamesConfigFile);
+	public static FileConfiguration getMiniGameConfig(int id) {
+		YamlConfiguration mgc = null;
+		if (minigamesConfigs.containsKey(id)) {
+			mgc = minigamesConfigs.get(id);
 		}
-		return minigamesConfig;
+		else {
+			MessageSystem.consoleDebug("loading minigame cfg #" + id);
+			mgc = YamlConfiguration.loadConfiguration(getMiniGameConfigFile(id));
+			minigamesConfigs.put(id, mgc);
+		}
+		return mgc;
 	}
 
-	public static void saveMiniGameConfig() {
-		if (minigamesConfig != null) {
+	public static void saveMiniGameConfig(int id) {
+		if (minigamesConfigs.containsKey(id)) {
 			try {
-				minigamesConfig.save(minigamesConfigFile);
+				//MessageSystem.consoleDebug("saving minigame cfg #" + id); //FIXME sync
+				minigamesConfigs.get(id).save(getMiniGameConfigFile(id));
 			}
 			catch (IOException e) {
-				MessageSystem.consoleError(MINIGAMES_CONFIGNAME + "cannot be overwritten or created");
+				MessageSystem.consoleError(getMiniGameConfigFile(id) + "cannot be overwritten or created");
 				e.printStackTrace();
 			}
 		}
+	}
+
+	private static File getMiniGameConfigFile(final int id) {
+		return new File(getMiniGameConfigFolder(), File.separator + id + ".yml");
+	}
+
+	public static File getMiniGameConfigFolder() {
+		File miniGameConfigFolder = new File(PluginManagement.getInstance().getDataFolder(), MINIGAMES_CONFIG_FOLDER);
+		if (!miniGameConfigFolder.exists()) {
+			miniGameConfigFolder.mkdirs();
+		}
+		return miniGameConfigFolder;
+	}
+
+	public static boolean miniGameConfigFileExists(final int id) {
+		return getMiniGameConfigFile(id).length() > 0L;
+	}
+
+	public static void deleteMiniGameConfigFile(int id) {
+		MessageSystem.consoleDebug("deleting minigame cfgfile #" + id);
+		getMiniGameConfigFile(id).delete();
 	}
 
 
@@ -129,6 +160,7 @@ public class ConfigAccess {
 		}
 		return dataFolder;
 	}
+
 
 
 }

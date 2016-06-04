@@ -26,7 +26,7 @@ public class JoinMghCommand extends AbstractCommand {
 				int x = Integer.parseInt(args[1]);
 				int y = Integer.parseInt(args[2]);
 				int z = Integer.parseInt(args[3]);
-				target = new Location(HubControl.getMiniGameHubWorld(), x, y, z); //FIXME
+				target = new Location(HubControl.getMiniGameHubWorld(), x, y, z);
 			}
 			catch (NumberFormatException e) {
 				return false;

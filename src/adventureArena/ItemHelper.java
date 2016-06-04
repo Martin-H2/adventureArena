@@ -113,7 +113,7 @@ public class ItemHelper {
 	}
 
 
-	private static boolean isPlaceable(Material itemMaterial) { //TODO complete list and test ?
+	private static boolean isPlaceable(Material itemMaterial) {
 		return itemMaterial.isBlock()
 			|| itemMaterial == Material.WOOD_DOOR
 			|| itemMaterial == Material.SPRUCE_DOOR_ITEM

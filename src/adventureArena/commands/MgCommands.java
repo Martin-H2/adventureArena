@@ -1,12 +1,15 @@
 package adventureArena.commands;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import adventureArena.*;
+import adventureArena.PluginManagement;
 import adventureArena.control.HubControl;
+import adventureArena.control.MiniGameLoading;
 import adventureArena.control.MiniGameManagement;
 import adventureArena.control.PlayerControl;
 import adventureArena.messages.MessageSystem;
+import adventureArena.miniGameComponents.MiniGame;
 
 
 public class MgCommands extends AbstractCommand {
@@ -93,12 +96,35 @@ public class MgCommands extends AbstractCommand {
 			}
 			return true;
 		}
-		else if (args.length == 2 && subCommand.equals("rebuildMiniGameCfg")) {
+		else if (args.length == 2 && subCommand.equals("rcw")) {
 			if (!sender.isOp()) {
 				MessageSystem.error(NEED_OP_MESSAGE, sender);
 			}
 			else {
-				HubControl.rebuildMiniGameCfgFromSigns(args[1]);
+				for (Player p: Bukkit.getOnlinePlayers()) {
+					HubControl.kickFromMiniGameAndHub(p);
+				}
+				MessageSystem.consoleWarn("performing saveEnvironmentBackup() for all minigames ...");
+				for (MiniGame mg: MiniGameLoading.getMiniGames()) {
+					mg.saveEnvironmentBackup();
+				}
+				MiniGameManagement.rebuildMiniGameCfgFromSigns(args[1]);
+			}
+			return true;
+		}
+		else if (args.length == 2 && subCommand.equals("rcs")) {
+			if (!sender.isOp()) {
+				MessageSystem.error(NEED_OP_MESSAGE, sender);
+			}
+			else {
+				for (Player p: Bukkit.getOnlinePlayers()) {
+					HubControl.kickFromMiniGameAndHub(p);
+				}
+				MessageSystem.consoleWarn("performing loadEnvironmentBackup() for all minigames ...");
+				for (MiniGame mg: MiniGameLoading.getMiniGames()) {
+					mg.loadEnvironmentBackup();
+				}
+				MiniGameManagement.rebuildMiniGameCfgFromSigns(args[1]);
 			}
 			return true;
 		}

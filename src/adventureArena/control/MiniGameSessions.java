@@ -27,7 +27,7 @@ public class MiniGameSessions {
 
 	public static void prepareSession(MiniGame miniGame) {
 		miniGame.wipeEntities();
-		miniGame.restoreEnvironmentBackup();
+		miniGame.loadEnvironmentBackup();
 	}
 
 	static void joinPlaySession(final MiniGame miniGame, final String teamName, final Player p, final Vector spawnPoint) {
@@ -90,7 +90,7 @@ public class MiniGameSessions {
 		if (PlayerControl.isEditingMiniGame(player)) {
 			InventorySaver.saveInventoryAndPlayerMeta(player, ConfigPaths.savedCreativeData);
 			if (mg.getNumberOfPlayersRemaining() == 0) {
-				mg.doEnvironmentBackup();
+				mg.saveEnvironmentBackup();
 				mg.wipeSessionVariables();
 			}
 		}
@@ -98,7 +98,7 @@ public class MiniGameSessions {
 			ScoreManager.onPlayerLeft(mg, player);
 			if (mg.isVictory()) {
 				mg.setOver();
-				double sessionEndDelay = mg.getNumberOfPlayersRemaining() >= 1 ? 5.0 : 0.1;
+				double sessionEndDelay = mg.getNumberOfPlayersRemaining() >= 1 ? 5.0 : 3.0;
 				PluginManagement.executeDelayed(sessionEndDelay, new Runnable() {
 
 					@Override
@@ -136,14 +136,14 @@ public class MiniGameSessions {
 		});
 		miniGame.wipeEntities();
 		miniGame.wipeSessionVariables();
-		miniGame.restoreEnvironmentBackup(); // not really needed, but looks better
+		miniGame.loadEnvironmentBackup(); // not really needed, but looks better
 	}
 
 
 	public static void kickIfInsideMiniGame(final Player p) {
 		if (PlayerControl.isPlayingMiniGame(p) || PlayerControl.isEditingMiniGame(p)) {
 			MiniGame mg = MiniGameLoading.getMiniGameForPlayer(p);
-			MessageSystem.consoleWarn(p.getName() + " was kicked from '" + mg.getName());
+			MessageSystem.consoleWarn(p.getName() + " was kicked from '" + mg.getName() + "' id: " + mg.getID());
 			leaveCurrentSession(p, false);
 		}
 	}
@@ -158,12 +158,17 @@ public class MiniGameSessions {
 		// EDIT SESSION CHECK
 		if (miniGame.isEditSessionActive()) {
 			MessageSystem.errorToGroup("This minigame is currently locked by an edit-session.", players);
-			MessageSystem.errorToGroup("Sombody wanted to play your " + miniGame.getName() + ", but it's locked by an edit-session.", miniGame.getAllowedEditors());
+			MessageSystem.errorToGroup("Sombody wanted to play your " + miniGame.getName() + ", but it's locked by an edit-session.", miniGame.getOnlineAllowedEditors());
 			return false;
 		}
 		// IN PROGRESS CHECK
 		if (miniGame.isPlaySessionActive()) {
-			MessageSystem.errorToGroup("This minigame is already in progress.", players);
+			if (miniGame.isOver()) {
+				MessageSystem.warningToGroup("This minigame will end soon. Try again in 4s", players);
+			}
+			else {
+				MessageSystem.errorToGroup("This minigame is already in progress.", players);
+			}
 			return false;
 		}
 		return true;

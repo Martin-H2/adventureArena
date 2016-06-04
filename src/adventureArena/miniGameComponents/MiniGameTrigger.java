@@ -8,6 +8,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import adventureArena.PluginManagement;
+import adventureArena.messages.MessageSystem;
 import adventureArena.score.ScoreManager;
 import adventureArena.tasks.AbstractPeriodicTask;
 import adventureArena.tasks.PeriodicEntityTask;
@@ -86,7 +87,7 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 			explosionPower = (boolean) serializedForm.get("explodeOnDeath") ? 1f : 0f;
 		}
 		if (serializedForm.containsKey("explosionPower")) {
-			explosionPower = (float) serializedForm.get("explosionPower");
+			explosionPower = (float) (double) serializedForm.get("explosionPower"); //yes, bukkit ConfigurationSerializable SUCKS !
 		}
 		newScore = (int) serializedForm.get("newScore");
 		if (serializedForm.containsKey("count")) {
@@ -141,7 +142,13 @@ public class MiniGameTrigger implements ConfigurationSerializable {
 	public void reset() {
 		hasGlobalCd = false;
 		for (int id: runningTasks) {
-			PluginManagement.cancelTask(id);
+			try {
+				PluginManagement.cancelTask(id);
+			}
+			catch (Exception e) {
+				MessageSystem.consoleError("Exception on Trigger RESET");
+				e.printStackTrace();
+			}
 		}
 		runningTasks.clear();
 	}

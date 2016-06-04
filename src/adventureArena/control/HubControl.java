@@ -1,12 +1,10 @@
 package adventureArena.control;
 
 import java.util.ArrayList;
-import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
@@ -15,7 +13,6 @@ import org.bukkit.util.Vector;
 import adventureArena.AA_SignCommand;
 import adventureArena.ConfigAccess;
 import adventureArena.InventorySaver;
-import adventureArena.PluginManagement;
 import adventureArena.enums.ConfigPaths;
 import adventureArena.enums.PlayerState;
 import adventureArena.messages.MessageSystem;
@@ -105,59 +102,6 @@ public class HubControl {
 
 	public static boolean isInMgHubAABB(final Location location) {
 		return location.toVector().isInAABB(HubControl.MINIGAME_HUB_MIN, HubControl.MINIGAME_HUB_MAX);
-	}
-
-
-
-	public static void rebuildMiniGameCfgFromSigns(final String worldName) { //TODO cache allowed Editors
-		final World world = Bukkit.getWorld(worldName);
-		if (world == null) {
-			MessageSystem.consoleError("world not found: " + worldName);
-			return;
-		}
-		Block block;
-		int numBlocks = 0;
-		final List<AA_SignCommand> foundSignCommands = new ArrayList<AA_SignCommand>();
-		MessageSystem.consoleDebug("searching SignCommands...");
-		for (int x = MINIGAME_HUB_MIN.getBlockX(); x <= MINIGAME_HUB_MAX.getBlockX(); x++) {
-			for (int y = MINIGAME_HUB_MIN.getBlockY(); y <= MINIGAME_HUB_MAX.getBlockY(); y++) {
-				for (int z = MINIGAME_HUB_MIN.getBlockZ(); z <= MINIGAME_HUB_MAX.getBlockZ(); z++) {
-					numBlocks++;
-					block = world.getBlockAt(x, y, z);
-					AA_SignCommand signCommand = AA_SignCommand.createFrom(block);
-					if (signCommand != null) {
-						foundSignCommands.add(signCommand);
-					}
-				}
-			}
-		}
-		MessageSystem.consoleDebug("done. found " + foundSignCommands.size() + " cmds in " + numBlocks + " blocks.");
-		PluginManagement.executeDelayed(5, new Runnable() {
-
-			@Override
-			public void run() {
-				MessageSystem.consoleDebug("loading borders...");
-				for (AA_SignCommand cmd: foundSignCommands) {
-					if (cmd.getCommand().equals("border")) {
-						cmd.executeOnCreation(null, world);
-					}
-				}
-				MessageSystem.consoleDebug("done...");
-				PluginManagement.executeDelayed(5, new Runnable() {
-
-					@Override
-					public void run() {
-						MessageSystem.consoleDebug("loading other commands...");
-						for (AA_SignCommand cmd: foundSignCommands) {
-							if (!cmd.getCommand().equals("border")) {
-								cmd.executeOnCreation(null, world);
-							}
-						}
-						MessageSystem.consoleDebug("done...");
-					}
-				});
-			}
-		});
 	}
 
 

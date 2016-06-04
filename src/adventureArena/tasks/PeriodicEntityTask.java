@@ -70,7 +70,7 @@ public class PeriodicEntityTask extends AbstractPeriodicTask {
 				public void lastTick() {
 					if (entity.isValid()) {
 						if (explosionPower > 0f) {
-							//entity.setCustomName("Exploding " + entity.getName());
+							entity.setCustomName("Exploding " + entity.getName());
 							entity.getWorld().createExplosion(entity.getLocation(), explosionPower);
 						}
 						entity.remove();

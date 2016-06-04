@@ -1,12 +1,14 @@
 package adventureArena.control;
 
+import java.io.File;
+import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.List;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import adventureArena.ConfigAccess;
+import adventureArena.Util;
 import adventureArena.enums.ConfigPaths;
 import adventureArena.messages.MessageSystem;
 import adventureArena.miniGameComponents.MiniGame;
@@ -19,24 +21,35 @@ public class MiniGameLoading {
 
 	public static void loadMiniGamesFromConfig() {
 		miniGames = new ArrayList<MiniGame>();
-		for (String path: ConfigAccess.getMiniGameConfig().getRoot().getKeys(false)) {
-			MiniGame mg = MiniGame.loadFromConfig(Integer.parseInt(path));
-			if (mg != null) {
-				miniGames.add(mg);
-				if (mg.isPlaySessionActive()) {
-					MessageSystem.consoleWarn("miniGame was still in progress: '" + mg.getName() + "', cleaning up...");
-					mg.setInProgress(false);
-					mg.wipeEntities();
-					mg.wipeSessionVariables();
-					//mg.restoreEnvironmentBackup();
+
+		File[] minigameConfigFiles = ConfigAccess.getMiniGameConfigFolder().listFiles(new FilenameFilter() {
+
+			@Override
+			public boolean accept(File dir, String name) {
+				return name.endsWith(".yml");
+			}
+		});
+
+		for (File mgcf: minigameConfigFiles) {
+			try {
+				int id = Integer.parseInt(Util.stripExtension(mgcf.getName()));
+				MiniGame mg = MiniGame.loadFromConfig(id);
+				if (mg != null) {
+					miniGames.add(mg);
+					if (mg.isAnySessionActive()) {
+						MessageSystem.consoleWarn("miniGame was still in progress: '" + mg.getName() + "', cleaning up...");
+						mg.wipeEntities();
+						mg.wipeSessionVariables();
+						//mg.restoreEnvironmentBackup(); //FIXME rethink
+					}
 				}
 			}
+			catch (NumberFormatException e) {
+				MessageSystem.consoleError("filename does not comprise an integer ID: " + mgcf.getAbsolutePath());
+			}
 		}
-		for (Player p: Bukkit.getOnlinePlayers()) {
-			MiniGameSessions.kickIfInsideMiniGame(p);
-		}
-	}
 
+	}
 
 	public static List<MiniGame> getMiniGames() {
 		if (miniGames == null) {

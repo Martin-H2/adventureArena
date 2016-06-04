@@ -119,7 +119,7 @@ public class TeamManager {
 		// SPAWNS CHECK
 		if (teamSpawns == null || teamSpawns.isEmpty()) {
 			MessageSystem.errorToGroup("No spawnpoints found for team " + teamName, players);
-			MessageSystem.errorToGroup(players.size() + " player(s) failed joining your " + miniGame.getName() + " - no spawPoints for team " + teamName, miniGame.getAllowedEditors());
+			MessageSystem.errorToGroup(players.size() + " player(s) failed joining your " + miniGame.getName() + " - no spawPoints for team " + teamName, miniGame.getOnlineAllowedEditors());
 			return false;
 		}
 		return true;

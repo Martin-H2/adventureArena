@@ -156,7 +156,7 @@ public class AA_SignCommand {
 		if (command.equals("border")) {
 			int id = Integer.parseInt(parameterMap.get("id"));
 			if (miniGame == null) {
-				miniGame = MiniGame.loadFromConfig(id);
+				miniGame = MiniGameLoading.getMiniGame(id); //FIXME ?
 			}
 			if (miniGame == null) {
 				failAndCancel(breaker, "Can't find corresponding miniGame #" + id, c);
@@ -225,7 +225,7 @@ public class AA_SignCommand {
 		}
 
 		if (miniGame == null && isSurroundingMiniGameRequired()) {
-			failAndBreak(optionalCreator, "Command-sign ('" + command + "') is not inside miniGame borders" + (optionalCreator == null ? " @" + signBlock.getLocation().toVector() : ""));
+			failAndBreak(optionalCreator, "Command-sign ('" + command + "') is not inside miniGame borders " + (optionalCreator == null ? toString() : ""));
 			return false;
 		}
 
@@ -437,10 +437,10 @@ public class AA_SignCommand {
 					if (parameterMap.containsKey("explode")) {
 						try {
 							explosionPower = Float.parseFloat(parameterMap.get("explode"));
-							if (explosionPower < 0 || explosionPower > 2000) throw new IllegalArgumentException();
+							if (explosionPower < 0 || explosionPower > 16) throw new IllegalArgumentException();
 						}
 						catch (Exception e) {
-							failAndBreak(optionalCreator, "explosion power must be between 0 and 2000  (4 equals TNT)");
+							failAndBreak(optionalCreator, "explosion power must be between 0 and 16  (4 equals TNT)");
 							return false;
 						}
 						parameterMap.remove("explode");
@@ -616,7 +616,7 @@ public class AA_SignCommand {
 
 	@Override
 	public String toString() {
-		return command + ", params: " + parameterMap + " attachedTo: " + attachedBlock.getType();
+		return "[" + command + ", params: " + parameterMap + " attachedTo: " + attachedBlock.getType() + " @" + attachedBlock.getLocation().toVector().toString() + "]";
 	}
 
 	public static AA_SignCommand createFrom(final Block signBlock) {
